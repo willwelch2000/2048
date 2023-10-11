@@ -1,8 +1,9 @@
+using MathNet.Numerics.LinearAlgebra;
 using Game2048.Game;
 
 namespace AI2048;
 
-public class Agent2048 : IApproximateQLearnAgent<int[,], Direction>
+public class Agent2048 : IQLearnAgent<int[,], Direction>
 {
     // // // fields
 
@@ -12,6 +13,9 @@ public class Agent2048 : IApproximateQLearnAgent<int[,], Direction>
     // // // properties
 
     public double Discount => 1.0;
+    public int InputSize => 16;
+    public int OutputSize => 4;
+    public int NeuralNetInputLayerSize => 256;
 
 
     // // // methods
@@ -32,6 +36,25 @@ public class Agent2048 : IApproximateQLearnAgent<int[,], Direction>
         // features["highest in corner"] = HighestInCorner(nextState) ? 0.1 : 0;
         // features["highest in middle"] = HighestInMiddle(nextState) ? 0.1 : 0;
         // features["bias"] = 0.1;
+        return features;
+    }
+
+    public Vector<double> GetNeuralNetFeatures(int[,] state)
+    {
+        int[] tiles = FlattenIntMatrix(state).ToArray();
+        Vector<double> features = Vector<double>.Build.Dense(NeuralNetInputLayerSize);
+        int i = 0;
+
+        // Basic features--all tile values
+        foreach (int val in state)
+            features[i++] = (double) val / 10000;
+        
+        // Maps of which tiles are the same
+        for (int j = 0; j < 16; j++)
+            for (int k = 0; k < 16; k++)
+                if (j != k)
+                    features[i++] = tiles[j] == tiles[k] ? 1 : 0;
+        
         return features;
     }
 
@@ -99,6 +122,28 @@ public class Agent2048 : IApproximateQLearnAgent<int[,], Direction>
     public double GetScore(int[,] state)
     {
         return FlattenIntMatrix(state).Max();
+    }
+    
+    public Direction GetActionFromNodeNumber(int node)
+    {
+        if (node == 0)
+            return Direction.UP;
+        if (node == 1)
+            return Direction.RIGHT;
+        if (node == 2)
+            return Direction.DOWN;
+        return Direction.LEFT;
+    }
+    
+    public int GetNodeNumberFromAction(Direction direction)
+    {
+        if (direction == Direction.UP)
+            return 0;
+        if (direction == Direction.RIGHT)
+            return 1;
+        if (direction == Direction.DOWN)
+            return 2;
+        return 3;
     }
 
     /// <summary>

@@ -1,8 +1,10 @@
+using MathNet.Numerics.LinearAlgebra;
+
 namespace AI2048;
 
 /// <typeparam name="S">Represents type of state</typeparam>
 /// <typeparam name="A">Represents type of action</typeparam>
-public interface IApproximateQLearnAgent<S, A>
+public interface IQLearnAgent<S, A>
 {
     // // // properties
 
@@ -10,6 +12,9 @@ public interface IApproximateQLearnAgent<S, A>
     /// How much rewards decay (1 is no decay, 0 is full decay)
     /// </summary>
     public double Discount { get; }
+    public int InputSize { get; }
+    public int OutputSize { get; }
+    public int NeuralNetInputLayerSize { get; }
 
 
     // // // methods
@@ -42,6 +47,14 @@ public interface IApproximateQLearnAgent<S, A>
     /// <param name="action"></param>
     /// <returns>Dictionary mapping name (string) to value (double) of each feature</returns>
     public Dictionary<string, double> GetFeatures(S state, A action);
+
+    /// <summary>
+    /// This becomes the input layer of a neural network.
+    /// It's based just off of state, not q-state
+    /// </summary>
+    /// <param name="state"></param>
+    /// <returns></returns>
+    public Vector<double> GetNeuralNetFeatures(S state);
 
     /// <summary>
     /// Get list of all legal actions at a state.
@@ -77,4 +90,19 @@ public interface IApproximateQLearnAgent<S, A>
     /// <param name="state"></param>
     /// <returns></returns>
     public double GetScore(S state);
+
+    /// <summary>
+    /// Given a number less than the number of output nodes, get an action.
+    /// Used to convert an output node into an action
+    /// </summary>
+    /// <param name="node"></param>
+    /// <returns></returns>
+    public A GetActionFromNodeNumber(int node);
+
+    /// <summary>
+    /// Given an action, convert it into an output node index
+    /// </summary>
+    /// <param name="action"></param>
+    /// <returns></returns>
+    public int GetNodeNumberFromAction(A action);
 }
