@@ -101,7 +101,7 @@ public abstract class QLearner<S, A>
     /// </summary>
     /// <param name="state">current state</param>
     /// <returns>best action, or default if no actions available</returns>
-    public A? GetActionFromQValues(S state)
+    public virtual A? GetActionFromQValues(S state)
     {
         IEnumerable<A> legalActions = agent.GetLegalActions(state);
         if (!legalActions.Any())

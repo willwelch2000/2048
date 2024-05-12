@@ -32,6 +32,18 @@ public class DeepQLearner<S, A> : QLearner<S, A>
 
     // // // methods
 
+    public override A? GetActionFromQValues(S state)
+    {
+        Vector<double> output = mainNet.GetOutputValues(agent.GetNeuralNetFeatures(state));
+        double max = output.Max();
+        int[] maxNodes = Enumerable.Range(0, output.Count).Where(x => output[x] >= max).ToArray();
+
+        // Choose randomly
+        int randomIndex = random.Next(maxNodes.Length);
+
+        return agent.GetActionFromNodeNumber(maxNodes[randomIndex]);
+    }
+
 
     public override double GetQValue(S state, A action)
     {
