@@ -10,7 +10,7 @@ public class Game : IGame
     
     private const int dimension = 4;
     private const double percentageTwos = 0.9;
-    private readonly Random random = new Random();
+    private readonly Random random = new();
 
     /// <summary>
     /// Matrix representing the board of the 2048 Game.
@@ -55,6 +55,8 @@ public class Game : IGame
     /// <param name="board">a 4x4 int matrix representing the board</param>
     public Game(int[,] board)
     {
+        if (board.GetLength(0) != dimension || board.GetLength(1) != dimension)
+            throw new ArgumentException("board must be a 4x4 matrix.");
         foreach ((int row, int column) in Coordinates)
             this.board[row, column] = board[row, column];
     }
@@ -63,11 +65,12 @@ public class Game : IGame
     // // // indexers
 
     /// <summary>
-    /// Two dimensional indexer accesses board square
+    /// Two dimensional 0-based indexer accesses board square
     /// </summary>
     public int this[int row, int column]
     {
         get {
+            TestValidity(row, column);
             if (row < 0 || row >= dimension)
                 return 0;
             return board[row, column];
@@ -161,6 +164,7 @@ public class Game : IGame
     /// <returns>true if empty, false if filled</returns>
     public bool Empty(int row, int column)
     {
+        TestValidity(row, column);
         return this[row, column] == 0;
     }
 
@@ -181,12 +185,12 @@ public class Game : IGame
         return base.GetHashCode();
     }
 
-    public static bool operator ==(Game game1, Game game2)
+    public static bool operator == (Game game1, Game game2)
     {
         return game1.Equals(game2);
     }
 
-    public static bool operator !=(Game game1, Game game2)
+    public static bool operator != (Game game1, Game game2)
     {
         return !game1.Equals(game2);
     }
@@ -198,7 +202,7 @@ public class Game : IGame
     /// <returns>true if possible, false otherwise</returns>
     public bool IsPossibleMove(Direction direction)
     {
-        Game copy = new Game(this);
+        Game copy = new(this);
         copy.Action(direction);
         return !Equals(copy);
     }
@@ -212,7 +216,7 @@ public class Game : IGame
     /// <param name="direction"></param>
     public void Action(Direction direction)
     {
-        Game copy = new Game(this);
+        Game copy = new(this);
         if (direction == Direction.LEFT)
         {
             LeftBase();
@@ -260,7 +264,6 @@ public class Game : IGame
     /// <param name="direction"></param>
     public void ActionNoAddTile(Direction direction)
     {
-        Game copy = new Game(this);
         if (direction == Direction.LEFT)
         {
             LeftBase();
@@ -424,5 +427,13 @@ public class Game : IGame
         foreach ((int row, int column) in Coordinates)
             boardCopy[row, column] = board[row, column];
         return boardCopy;
+    }
+
+    private static void TestValidity(int row, int column)
+    {
+        if (row >= dimension || column >= dimension)
+            throw new ArgumentException($"row and column must be below {dimension}.");
+        if (row < 0 || column < 0)
+            throw new ArgumentException("row and column must be positive.");
     }
 }

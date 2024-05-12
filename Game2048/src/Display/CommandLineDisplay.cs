@@ -6,13 +6,12 @@ public class CommandLineDisplay : IDisplay
 {
     // // // fields
 
-    IGame game;
+    private IGame game;
 
 
     // // // constructors
 
-    public 
-    CommandLineDisplay(IGame game)
+    public CommandLineDisplay(IGame game)
     {
         this.game = game;
         FollowGame(game);

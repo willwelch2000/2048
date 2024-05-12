@@ -22,20 +22,13 @@ public class Program
         }
     }
 
-    private static Direction ParseDirection(string input)
-    {
-        switch (input.ToLower())
+    private static Direction ParseDirection(string input) =>
+        input.ToLower() switch
         {
-            case "left":
-                return Direction.LEFT;
-            case "right":
-                return Direction.RIGHT;
-            case "up":
-                return Direction.UP;
-            case "down":
-                return Direction.DOWN;
-            default:
-                return Direction.LEFT;
-        }
-    }
+            "left" => Direction.LEFT,
+            "right" => Direction.RIGHT,
+            "up" => Direction.UP,
+            "down" => Direction.DOWN,
+            _ => Direction.LEFT,
+        };
 }
