@@ -365,7 +365,7 @@ public class Game : IGame
                         board[row, 0] = board[row, 1];
                         board[row, 1] = 0;
                     }
-                    else if (board[row, 0] == board[row, 1] && combined[row, 0])
+                    else if (board[row, 0] == board[row, 1] && !combined[row, 0])
                     {
                         board[row, 0] *= 2;
                         board[row, 1] = 0;
