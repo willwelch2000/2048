@@ -2,16 +2,16 @@ using Game2048.Game;
 
 namespace Game2048.Display;
 
-public class CommandLineDisplay2048 : IDisplay2048
+public class CommandLineDisplay : IDisplay
 {
     // // // fields
 
-    private IGame2048 game;
+    private IGame game;
 
 
     // // // constructors
 
-    public CommandLineDisplay2048(IGame2048 game)
+    public CommandLineDisplay(IGame game)
     {
         this.game = game;
         FollowGame(game);
@@ -20,7 +20,7 @@ public class CommandLineDisplay2048 : IDisplay2048
 
     // // // methods
 
-    public void FollowGame(IGame2048 game)
+    public void FollowGame(IGame game)
     {
         this.game = game;
         game.MoveLeft += DisplayGame;
