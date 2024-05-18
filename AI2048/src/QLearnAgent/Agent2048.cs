@@ -39,6 +39,11 @@ public class Agent2048 : IQLearnAgent<int[,], Direction>
         return features;
     }
 
+    /// <summary>
+    /// 16 features representing tile numbers, and 240 representing which tiles are the same
+    /// </summary>
+    /// <param name="state"></param>
+    /// <returns></returns>
     public Vector<double> GetNeuralNetFeatures(int[,] state)
     {
         int[] tiles = FlattenIntMatrix(state).ToArray();
@@ -58,16 +63,14 @@ public class Agent2048 : IQLearnAgent<int[,], Direction>
         return features;
     }
 
-    public int[,] GetGameState()
-    {
-        return game.Board;
-    }
+    public int[,] GetGameState() =>
+        game.Board;
 
     public IEnumerable<Direction> GetLegalActions(int[,] state)
     {
         foreach (Direction direction in Enum.GetValues(typeof(Direction)))
         {
-            IGame copy = new Game(state);
+            Game copy = new(state);
             copy.Action(direction);
             if (!game.Equals(copy))
                 yield return direction;
@@ -75,8 +78,7 @@ public class Agent2048 : IQLearnAgent<int[,], Direction>
     }
 
     /// <summary>
-    /// Reward for 2048 is defined as difference in highest numbers.
-    /// e.g. getting a new highest tile of 2048 is a reward of 1024
+    /// Testing different scoring methods
     /// </summary>
     /// <param name="state"></param>
     /// <param name="action"></param>

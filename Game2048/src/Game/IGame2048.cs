@@ -1,6 +1,6 @@
 namespace Game2048.Game;
 
-public interface IGame
+public interface IGame2048
 {
     // // // events
 

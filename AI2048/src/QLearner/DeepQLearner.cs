@@ -18,7 +18,7 @@ public class DeepQLearner<S, A> : QLearner<S, A>
     /// Number of moves made before the main network is copied to the target network
     /// </summary>
     private const int iterationsBeforeTransfer = 100;
-    private Sigmoid sigmoid = new();
+    private readonly Sigmoid sigmoid = new();
 
 
     // // // constructors
@@ -60,7 +60,7 @@ public class DeepQLearner<S, A> : QLearner<S, A>
         output[agent.GetNodeNumberFromAction(action)] = sigmoid.Activate(reward + agent.Discount * valueNextState);
         mainNet.PerformGradientDescent(input, output);
 
-        if (iterationCounter == iterationsBeforeTransfer)
+        if (iterationCounter++ == iterationsBeforeTransfer)
         {
             iterationCounter = 0;
             targetNet = mainNet;

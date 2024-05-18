@@ -41,7 +41,8 @@ public interface IQLearnAgent<S, A>
     /// <summary>
     /// Get all the features of a q-state, defined by a state and action.
     /// Features are named by a string, and their value is a double.
-    /// Basically static
+    /// Basically a static function
+    /// Used for approximate q learning
     /// </summary>
     /// <param name="state"></param>
     /// <param name="action"></param>

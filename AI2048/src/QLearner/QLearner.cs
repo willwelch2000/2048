@@ -5,24 +5,16 @@ namespace AI2048;
 /// </summary>
 /// <typeparam name="S">Represents type of state</typeparam>
 /// <typeparam name="A">Represents type of action</typeparam>
-public abstract class QLearner<S, A>
+public abstract class QLearner<S, A>(IQLearnAgent<S, A> agent)
 {
     // // // fields
 
     /// <summary>
     /// Object containing details of the game we're learning
     /// </summary>
-    protected readonly IQLearnAgent<S, A> agent;
+    protected readonly IQLearnAgent<S, A> agent = agent;
 
     protected readonly Random random = new();
-
-
-    // // // constructors
-
-    public QLearner(IQLearnAgent<S, A> agent)
-    {
-        this.agent = agent;
-    }
 
 
     // // // properties
@@ -73,7 +65,7 @@ public abstract class QLearner<S, A>
     public A? GetAction(S state)
     {
         A[] legalActions = agent.GetLegalActions(state).ToArray();
-        if (!legalActions.Any())
+        if (legalActions.Length == 0)
             return default;
 
         if (random.NextDouble() < Epsilon)

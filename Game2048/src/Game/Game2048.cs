@@ -4,7 +4,7 @@
 /// Represents a 2048 Game.
 /// Allows outside code to simulate gameplay
 /// </summary>
-public class Game : IGame
+public class Game2048 : IGame2048
 {
     // // // fields
     
@@ -34,7 +34,7 @@ public class Game : IGame
     /// <summary>
     /// Default constructor--starts empty and adds two randomized tiles. 
     /// </summary>
-    public Game()
+    public Game2048()
     {
         AddTile();
         AddTile();
@@ -43,7 +43,7 @@ public class Game : IGame
     /// <summary>
     /// Constructor that generates a copy of another game. 
     /// </summary>
-    public Game(IGame other)
+    public Game2048(IGame2048 other)
     {
         foreach ((int row, int column) in Coordinates)
             board[row, column] = other[row, column];
@@ -53,7 +53,7 @@ public class Game : IGame
     /// Constructor given a starting board as a 4x4 int matrix
     /// </summary>
     /// <param name="board">a 4x4 int matrix representing the board</param>
-    public Game(int[,] board)
+    public Game2048(int[,] board)
     {
         if (board.GetLength(0) != dimension || board.GetLength(1) != dimension)
             throw new ArgumentException("board must be a 4x4 matrix.");
@@ -107,7 +107,7 @@ public class Game : IGame
     {
         get
         {
-            Game copy = new(this);
+            Game2048 copy = new(this);
             foreach (Direction direction in Enum.GetValues(typeof(Direction)))
             {
                 copy.Action(direction);
@@ -175,7 +175,7 @@ public class Game : IGame
     /// <returns>true if equal, false otherwise</returns>
     public override bool Equals(object? obj)
     {
-        if (obj is Game other)
+        if (obj is Game2048 other)
             return Coordinates.All(coord => this[coord.row, coord.column] == other[coord.row, coord.column]);
         return false;
     }
@@ -185,12 +185,12 @@ public class Game : IGame
         return base.GetHashCode();
     }
 
-    public static bool operator == (Game game1, Game game2)
+    public static bool operator == (Game2048 game1, Game2048 game2)
     {
         return game1.Equals(game2);
     }
 
-    public static bool operator != (Game game1, Game game2)
+    public static bool operator != (Game2048 game1, Game2048 game2)
     {
         return !game1.Equals(game2);
     }
@@ -202,7 +202,7 @@ public class Game : IGame
     /// <returns>true if possible, false otherwise</returns>
     public bool IsPossibleMove(Direction direction)
     {
-        Game copy = new(this);
+        Game2048 copy = new(this);
         copy.Action(direction);
         return !Equals(copy);
     }
@@ -216,7 +216,7 @@ public class Game : IGame
     /// <param name="direction"></param>
     public void Action(Direction direction)
     {
-        Game copy = new(this);
+        Game2048 copy = new(this);
         if (direction == Direction.LEFT)
         {
             LeftBase();
