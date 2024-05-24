@@ -80,13 +80,15 @@ public class Program
         };
         IDisplay display = new CommandLineDisplay(agent.Game);
         deepQLearner.PerformQLearning(100);
+        Console.WriteLine($"Test score (training): {deepQLearner.AverageScore}");
+        Console.WriteLine($"Test rewards (training): {deepQLearner.AverageRewards}");
 
         Console.WriteLine("done training");
 
         deepQLearner.ResetStats();
         deepQLearner.Epsilon = 0;
         deepQLearner.PerformQLearning(100);
-        Console.WriteLine($"Test score: {deepQLearner.AverageScore}");
-        Console.WriteLine($"Test rewards: {deepQLearner.AverageRewards}");
+        Console.WriteLine($"Test score (post-training): {deepQLearner.AverageScore}");
+        Console.WriteLine($"Test rewards (post-training): {deepQLearner.AverageRewards}");
     }
 }
