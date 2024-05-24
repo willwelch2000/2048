@@ -8,6 +8,7 @@ public interface IGame
     public event EventHandler? MoveRight;
     public event EventHandler? MoveUp;
     public event EventHandler? MoveDown;
+    public event EventHandler? GameRestart;
 
 
     // // // indexers
@@ -99,9 +100,21 @@ public interface IGame
     public void ActionNoAddTile(Direction direction);
 
     /// <summary>
+    /// Restart the game
+    /// </summary>
+    public void Restart();
+
+    /// <summary>
     /// Allow an outside class to link an event handler to a specific move
     /// </summary>
     /// <param name="eventHandler"></param>
     /// <param name="direction">which direction to track</param>
-    public void Subscribe(EventHandler eventHandler, Direction direction);
+    public void SubscribeToMove(EventHandler eventHandler, Direction direction);
+
+    /// <summary>
+    /// Allow an outside class to link an event handler to the restart method
+    /// </summary>
+    /// <param name="eventHandler"></param>
+    /// <param name="direction">which direction to track</param>
+    public void SubscribeToRestart(EventHandler eventHandler);
 }

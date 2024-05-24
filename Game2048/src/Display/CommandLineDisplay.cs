@@ -27,6 +27,7 @@ public class CommandLineDisplay : IDisplay
         game.MoveRight += DisplayGame;
         game.MoveUp += DisplayGame;
         game.MoveDown += DisplayGame;
+        game.GameRestart += DisplayGame;
     }
 
     public void DisplayGame()

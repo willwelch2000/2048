@@ -1,4 +1,5 @@
 ﻿using AI2048.Deep;
+using Game2048.Display;
 using Game2048.Game;
 using MathNet.Numerics.LinearAlgebra;
 
@@ -6,9 +7,12 @@ namespace AI2048;
 
 public class Program
 {
-    public static void Main(string[] args)
+    public static void Main()
     {
-        // TrainAndTest();
+        TrainAndTestDeepQLearning();
+    }
+
+    public static void NNTest() {
         
         NeuralNet net = new(2, 2, 2, 1);
 
@@ -64,5 +68,25 @@ public class Program
         approximateQLearner.PerformQLearning(testEpisodes);
         Console.WriteLine($"Test score: {approximateQLearner.AverageScore}");
         Console.WriteLine($"Test rewards: {approximateQLearner.AverageRewards}");
+    }
+
+    public static void TrainAndTestDeepQLearning()
+    {
+        Agent2048 agent = new();
+        DeepQLearner<int[,], Direction> deepQLearner = new(agent)
+        {
+            Epsilon = 1,
+            EpsilonDecay = 0.99,
+        };
+        IDisplay display = new CommandLineDisplay(agent.Game);
+        deepQLearner.PerformQLearning(100);
+
+        Console.WriteLine("done training");
+
+        deepQLearner.ResetStats();
+        deepQLearner.Epsilon = 0;
+        deepQLearner.PerformQLearning(100);
+        Console.WriteLine($"Test score: {deepQLearner.AverageScore}");
+        Console.WriteLine($"Test rewards: {deepQLearner.AverageRewards}");
     }
 }

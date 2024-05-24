@@ -5,12 +5,9 @@ namespace AI2048;
 
 public class Agent2048 : IQLearnAgent<int[,], Direction>
 {
-    // // // fields
-
-    public IGame game = new Game();
-
-
     // // // properties
+
+    public IGame Game { get; private set; } = new Game();
 
     public double Discount => 1.0;
     public int InputSize => 16;
@@ -40,7 +37,7 @@ public class Agent2048 : IQLearnAgent<int[,], Direction>
     }
 
     /// <summary>
-    /// 16 features representing tile numbers, and 240 representing which tiles are the same
+    /// 16 features representing tile numbers, and 240 representing which (nonzero) tiles are the same
     /// </summary>
     /// <param name="state"></param>
     /// <returns></returns>
@@ -58,13 +55,13 @@ public class Agent2048 : IQLearnAgent<int[,], Direction>
         for (int j = 0; j < 16; j++)
             for (int k = 0; k < 16; k++)
                 if (j != k)
-                    features[i++] = tiles[j] == tiles[k] ? 1 : 0;
+                    features[i++] = tiles[j] == tiles[k] && tiles[j] != 0 ? 1 : 0;
         
         return features;
     }
 
     public int[,] GetGameState() =>
-        game.Board;
+        Game.Board;
 
     public IEnumerable<Direction> GetLegalActions(int[,] state)
     {
@@ -72,7 +69,7 @@ public class Agent2048 : IQLearnAgent<int[,], Direction>
         {
             Game copy = new(state);
             copy.Action(direction);
-            if (!game.Equals(copy))
+            if (!Game.Equals(copy))
                 yield return direction;
         }
     }
@@ -108,12 +105,12 @@ public class Agent2048 : IQLearnAgent<int[,], Direction>
 
     public void PerformAction(Direction action)
     {
-        game.Action(action);
+        Game.Action(action);
     }
 
     public void Restart()
     {
-        game = new Game();
+        Game.Restart();
     }
 
     /// <summary>

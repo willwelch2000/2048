@@ -17,7 +17,7 @@ public class Game : IGame
     /// board[0, 0] is top left tile, board[3, 3] is the bottom right.
     /// 0 represents empty tile.
     /// </summary>
-    private readonly int[,] board = new int[dimension, dimension];
+    private int[,] board = new int[dimension, dimension];
 
 
     // // // events
@@ -27,6 +27,7 @@ public class Game : IGame
     public event EventHandler? MoveRight;
     public event EventHandler? MoveUp;
     public event EventHandler? MoveDown;
+    public event EventHandler? GameRestart;
 
 
     // // // constructors
@@ -289,6 +290,17 @@ public class Game : IGame
     }
 
     /// <summary>
+    /// Restart the game
+    /// </summary>
+    public void Restart()
+    {
+        board = new int[dimension, dimension];
+        AddTile();
+        AddTile();
+        GameRestart?.Invoke(this, new EventArgs());
+    }
+
+    /// <summary>
     /// A move to the left
     /// This method is the base for moving in any direction
     /// </summary>
@@ -388,7 +400,12 @@ public class Game : IGame
         }
     }
 
-    public void Subscribe(EventHandler eventHandler, Direction direction)
+    /// <summary>
+    /// Subscribe an event handler to a specific move
+    /// </summary>
+    /// <param name="eventHandler"></param>
+    /// <param name="direction"></param>
+    public void SubscribeToMove(EventHandler eventHandler, Direction direction)
     {
         switch (direction)
         {
@@ -405,6 +422,16 @@ public class Game : IGame
                 MoveDown += eventHandler;
                 break;
         }
+    }
+
+    /// <summary>
+    /// Subscribe an event handler to restart method
+    /// </summary>
+    /// <param name="eventHandler"></param>
+    /// <param name="direction"></param>
+    public void SubscribeToRestart(EventHandler eventHandler)
+    {
+        GameRestart += eventHandler;
     }
 
     /// <summary>

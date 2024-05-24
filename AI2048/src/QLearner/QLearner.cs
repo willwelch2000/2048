@@ -37,6 +37,11 @@ public abstract class QLearner<S, A>(IQLearnAgent<S, A> agent)
     public double EpsilonDecay { get; set; } = 0.9;
 
     /// <summary>
+    /// Minimum deviation factor. Epsilon won't decrease below this
+    /// </summary>
+    public double MinEpsilon { get; set; } = 0;
+
+    /// <summary>
     /// Summed score across all episodes played so far
     /// </summary>
     public double TotalScore { get; protected set; } = 0;
@@ -169,7 +174,14 @@ public abstract class QLearner<S, A>(IQLearnAgent<S, A> agent)
             EpisodesCompleted++;
             
             // Update epsilon
-            Epsilon *= EpsilonDecay;
+            if (Epsilon != MinEpsilon)
+            {
+                double newValEpsilon = Epsilon * EpsilonDecay;
+                if (newValEpsilon > MinEpsilon)
+                    Epsilon = newValEpsilon;
+                else
+                    Epsilon = MinEpsilon;
+            }
         }
     }
 

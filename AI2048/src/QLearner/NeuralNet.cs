@@ -31,7 +31,7 @@ public class NeuralNet
         weights = new Matrix<double>[numMiddleLayers + 1];
         weights[0] = Matrix<double>.Build.Random(numMiddleLayers > 0 ? numMiddleNodes : numOutputNodes, numInputNodes);
         weights[^1] = Matrix<double>.Build.Random(numOutputNodes, numMiddleLayers > 0 ? numMiddleNodes : numInputNodes);
-        for (int i = 1; i < numMiddleLayers + 1; i++)
+        for (int i = 1; i < numMiddleLayers; i++)
             weights[i] = Matrix<double>.Build.Random(numMiddleNodes, numMiddleNodes);
 
         // Initialize biases
@@ -51,9 +51,9 @@ public class NeuralNet
             nodes[i] = Vector<double>.Build.Dense(numMiddleNodes);
 
         // Initialize cache dictionaries
-        weightDerivativeCache = new();
-        biasDerivativeCache = new();
-        nodeDerivativeCache = new();
+        weightDerivativeCache = [];
+        biasDerivativeCache = [];
+        nodeDerivativeCache = [];
     }
 
 
@@ -129,6 +129,7 @@ public class NeuralNet
         {
             Matrix<double> layerWeightMatrix = newWeights[layer];
             Vector<double> layerBiasVector = newBiases[layer];
+
             // Iterate through all end nodes of next layer
             for (int endNode = 0; endNode < layerWeightMatrix.RowCount; endNode++)
             {
@@ -153,6 +154,11 @@ public class NeuralNet
         biases = newBiases;
     }
 
+    /// <summary>
+    /// TODO
+    /// </summary>
+    /// <param name="input"></param>
+    /// <param name="compare"></param>
     public void PerformGradientDescent(Vector<double>[] input, Vector<double>[] compare)
     {
 
@@ -278,14 +284,14 @@ public class NeuralNet
 
     public void ResetDerivativeCaches()
     {
-        weightDerivativeCache = new();
-        biasDerivativeCache = new();
-        nodeDerivativeCache = new();
+        weightDerivativeCache = [];
+        biasDerivativeCache = [];
+        nodeDerivativeCache = [];
     }
 
     public NeuralNet Clone()
     {
-        NeuralNet clone = new(1, 1, 1, weights.Length - 2);
+        NeuralNet clone = new(nodes[0].Count, nodes[1].Count, nodes[^1].Count, weights.Length - 1);
         for (int i = 0; i < weights.Length; i++)
         {
             clone.weights[i] = weights[i].Clone();
