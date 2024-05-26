@@ -12,8 +12,20 @@ public interface IQLearnAgent<S, A>
     /// How much rewards decay (1 is no decay, 0 is full decay)
     /// </summary>
     public double Discount { get; }
+
+    /// <summary>
+    /// How many inputs there are from agent for regular q-learning
+    /// </summary>
     public int InputSize { get; }
+
+    /// <summary>
+    /// How many outputs the agent has (number of actions it can take)
+    /// </summary>
     public int OutputSize { get; }
+
+    /// <summary>
+    /// Input size for neural network
+    /// </summary>
     public int NeuralNetInputLayerSize { get; }
 
 

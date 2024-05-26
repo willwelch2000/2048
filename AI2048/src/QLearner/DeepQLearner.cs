@@ -27,16 +27,16 @@ public class DeepQLearner<S, A> : QLearner<S, A>
     /// <summary>
     /// Number of moves made before the main network is copied to the target network
     /// </summary>
-    private const int iterationsBeforeTransfer = 100;
+    public int IterationsBeforeNetTransfer { get; set; }= 100;
     
     private readonly Sigmoid sigmoid = new();
 
 
     // // // constructors
 
-    public DeepQLearner(IQLearnAgent<S, A> agent) : base(agent)
+    public DeepQLearner(IQLearnAgent<S, A> agent, int numMiddleNodes, int numMiddleLayers) : base(agent)
     {
-        targetNet = new(agent.NeuralNetInputLayerSize, 50, agent.OutputSize, 2);
+        targetNet = new(agent.NeuralNetInputLayerSize, numMiddleNodes, agent.OutputSize, numMiddleLayers);
         mainNet = targetNet.Clone();
     }
 
@@ -45,13 +45,26 @@ public class DeepQLearner<S, A> : QLearner<S, A>
 
     public override A? GetActionFromQValues(S state)
     {
+        // Get node numbers of legal actions
+        int[] legalActionNodeNumbers = agent.GetLegalActions(state).Select(agent.GetNodeNumberFromAction).ToArray();
+        if (legalActionNodeNumbers.Length == 0)
+            return default;
+        
+        // Get output from neural net
         Vector<double> output = mainNet.GetOutputValues(agent.GetNeuralNetFeatures(state));
-        double max = output.Max();
-        int[] maxNodes = Enumerable.Range(0, output.Count).Where(x => output[x] >= max).ToArray();
 
-        // Choose randomly
+        // Max value of legal actions
+        double max = legalActionNodeNumbers.Select(i => output[i]).Max();
+
+        // All node numbers that meet this value--could be multiple that are tied for highest
+        int[] maxNodes = legalActionNodeNumbers.Where(i => output[i] >= max).ToArray();
+
+        // If only one, return that action
+        if (maxNodes.Length == 1)
+            return agent.GetActionFromNodeNumber(maxNodes[0]);
+
+        // Otherwise, choose randomly from the options
         int randomIndex = random.Next(maxNodes.Length);
-
         return agent.GetActionFromNodeNumber(maxNodes[randomIndex]);
     }
 
@@ -78,7 +91,7 @@ public class DeepQLearner<S, A> : QLearner<S, A>
         targetNet.PerformGradientDescent(input, output);
 
         // After given number of iterations, replace target net with main net
-        if (iterationCounter++ == iterationsBeforeTransfer)
+        if (iterationCounter++ == IterationsBeforeNetTransfer)
         {
             iterationCounter = 0;
             mainNet = targetNet;

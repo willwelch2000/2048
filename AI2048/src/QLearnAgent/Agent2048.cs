@@ -12,7 +12,7 @@ public class Agent2048 : IQLearnAgent<int[,], Direction>
     public double Discount => 1.0;
     public int InputSize => 16;
     public int OutputSize => 4;
-    public int NeuralNetInputLayerSize => 256;
+    public int NeuralNetInputLayerSize => 16;
 
 
     // // // methods
@@ -43,7 +43,7 @@ public class Agent2048 : IQLearnAgent<int[,], Direction>
     /// <returns></returns>
     public Vector<double> GetNeuralNetFeatures(int[,] state)
     {
-        int[] tiles = FlattenIntMatrix(state).ToArray();
+        // int[] tiles = FlattenIntMatrix(state).ToArray();
         Vector<double> features = Vector<double>.Build.Dense(NeuralNetInputLayerSize);
         int i = 0;
 
@@ -51,11 +51,11 @@ public class Agent2048 : IQLearnAgent<int[,], Direction>
         foreach (int val in state)
             features[i++] = (double) val / 10000;
         
-        // Maps of which tiles are the same
-        for (int j = 0; j < 16; j++)
-            for (int k = 0; k < 16; k++)
-                if (j != k)
-                    features[i++] = tiles[j] == tiles[k] && tiles[j] != 0 ? 1 : 0;
+        // // Maps of which tiles are the same
+        // for (int j = 0; j < 16; j++)
+        //     for (int k = 0; k < 16; k++)
+        //         if (j != k)
+        //             features[i++] = tiles[j] == tiles[k] && tiles[j] != 0 ? 1 : 0;
         
         return features;
     }

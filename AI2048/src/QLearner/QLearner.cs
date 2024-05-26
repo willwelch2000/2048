@@ -1,7 +1,7 @@
 namespace AI2048;
 
 /// <summary>
-/// 
+/// Q Learning algorithm base abstract class
 /// </summary>
 /// <typeparam name="S">Represents type of state</typeparam>
 /// <typeparam name="A">Represents type of action</typeparam>

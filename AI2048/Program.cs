@@ -73,21 +73,26 @@ public class Program
     public static void TrainAndTestDeepQLearning()
     {
         Agent2048 agent = new();
-        DeepQLearner<int[,], Direction> deepQLearner = new(agent)
+        DeepQLearner<int[,], Direction> deepQLearner = new(agent, 50, 2)
         {
             Epsilon = 1,
             EpsilonDecay = 0.99,
+            IterationsBeforeNetTransfer = 50,
         };
         IDisplay display = new CommandLineDisplay(agent.Game);
-        deepQLearner.PerformQLearning(100);
+        deepQLearner.PerformQLearning(6);
         Console.WriteLine($"Test score (training): {deepQLearner.AverageScore}");
         Console.WriteLine($"Test rewards (training): {deepQLearner.AverageRewards}");
+        double testScore = deepQLearner.AverageScore;
+        double testReward = deepQLearner.AverageRewards;
 
         Console.WriteLine("done training");
 
         deepQLearner.ResetStats();
         deepQLearner.Epsilon = 0;
-        deepQLearner.PerformQLearning(100);
+        deepQLearner.PerformQLearning(6);
+        Console.WriteLine($"Test score (training): {testScore}");
+        Console.WriteLine($"Test rewards (training): {testReward}");
         Console.WriteLine($"Test score (post-training): {deepQLearner.AverageScore}");
         Console.WriteLine($"Test rewards (post-training): {deepQLearner.AverageRewards}");
     }

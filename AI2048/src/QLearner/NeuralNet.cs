@@ -2,20 +2,43 @@ using MathNet.Numerics.LinearAlgebra;
 
 namespace AI2048.Deep;
 
+/// <summary>
+/// Implements a nerual network
+/// Calculation is done like this:
+///     nodes[i+1] = weights[i] * nodes[i] + biases[i]
+/// </summary>
 public class NeuralNet
 {
     // // // fields
+
     /// <summary>
     /// Array of matrices
     /// Each entry in a matrix is the weight from a starting node to an ending node
     /// indexed like w[end node, start node]
     /// There is a matrix for each layer-to-layer transformation
-    /// matrix * (layer as column vector) = next layer
+    /// matrix * (layer as column vector) + biases = next layer
     /// </summary>
     private Matrix<double>[] weights;
+
+    /// <summary>
+    /// Array of biases
+    /// Each entry in a vector is the bias for a given node in a given layer
+    /// There is a vector for each layer-to-layer transformation
+    /// </summary>
     private Vector<double>[] biases;
+
+    /// <summary>
+    /// activation function used
+    /// </summary>
     private readonly IActivationFunction activator;
+
+    /// <summary>
+    /// All nodes in the network
+    /// </summary>
     private readonly Vector<double>[] nodes;
+
+    // caches for derivative calculations
+
     private Dictionary<(int layer, int node, int wStartLayer, int wEndNode, int wStartNode), double> weightDerivativeCache;
     private Dictionary<(int layer, int node, int bStartLayer, int bEndNode), double> biasDerivativeCache;
     private Dictionary<(int endLayer, int endNode, int startLayer, int startNode), double> nodeDerivativeCache;
@@ -25,6 +48,15 @@ public class NeuralNet
 
     public NeuralNet(int numInputNodes, int numMiddleNodes, int numOutputNodes, int numMiddleLayers) : this(numInputNodes, numMiddleNodes, numOutputNodes, numMiddleLayers, new Sigmoid()) {}
 
+
+    /// <summary>
+    /// Main constructor
+    /// </summary>
+    /// <param name="numInputNodes">Number of nodes for input layer</param>
+    /// <param name="numMiddleNodes">Number of nodes for middle layers</param>
+    /// <param name="numOutputNodes">Number of nodes for output layer</param>
+    /// <param name="numMiddleLayers">Number of middle layers</param>
+    /// <param name="activator"></param>
     public NeuralNet(int numInputNodes, int numMiddleNodes, int numOutputNodes, int numMiddleLayers, IActivationFunction activator)
     {
         // Initialize weights
@@ -106,9 +138,10 @@ public class NeuralNet
 
     /// <summary>
     /// Given a single set of input value and its desired output, adjust the weights accordingly
+    /// TODO: optimize
     /// </summary>
-    /// <param name="input"></param>
-    /// <param name="compare"></param>
+    /// <param name="input">input layer</param>
+    /// <param name="compare">desired output</param>
     public void PerformGradientDescent(Vector<double> input, Vector<double> compare)
     {
         // Create new set of matrices for weights
@@ -133,7 +166,10 @@ public class NeuralNet
             // Iterate through all end nodes of next layer
             for (int endNode = 0; endNode < layerWeightMatrix.RowCount; endNode++)
             {
-                // Adjust all weights for the layer
+                // Adjust all weights for the layer: w = w - Alpha*d/dw(Loss)
+                // Loss = SUM((output - compare)^2)/outputlength
+                // d/dw(Loss) = SUM(2(output - compare)*d/dw(output))/outputlength
+                // Weight adjustment simplifies to: w = w - 2/outputlength * Alpha * SUM((output - compare)*d/dw(output))
                 for (int wStartNode = 0; wStartNode < layerWeightMatrix.ColumnCount; wStartNode++)
                 {
                     double wSum = 0;
@@ -142,11 +178,11 @@ public class NeuralNet
                     layerWeightMatrix[endNode, wStartNode] -= 2 / ((double) outputLength) * Alpha*wSum;
                 }
 
-                // Adjust all biases for the layer
+                // Adjust all biases for the layer--see above for explanation
                 double bSum = 0;
                 for (int outputNode = 0; outputNode < outputLength; outputNode++)
-                    bSum += 2 / ((double) outputLength) * (output[outputNode] - compare[outputNode]) * BiasDerivative(nodes.Length - 1, outputNode, layer, endNode);
-                layerBiasVector[endNode] -= Alpha*bSum;
+                    bSum += (output[outputNode] - compare[outputNode]) * BiasDerivative(nodes.Length - 1, outputNode, layer, endNode);
+                layerBiasVector[endNode] -= 2 / ((double) outputLength) * Alpha*bSum;
             }
         }
 
@@ -186,7 +222,10 @@ public class NeuralNet
         {
             double derivative;
             if (wEndNode == node)
-                derivative = activator.ActivationDerivative(nodes[layer][node]) * nodes[layer - 1][wStartNode];
+                // endnode = activator(w*startnode + ...), so d_endnode/dw = d_activator/d_activator_input * d_activator_input/dw = d_activator/d_activator_input * startnode
+                // Instead of actually giving the sigmoid input to the activator derivative function, we give the
+                // already-activated value, just because the calculation is simpler (sigmoid*(1-sigmoid)), and it's what we know: the node value
+                derivative = activator.ActivationDerivativeUsingActivated(nodes[layer][node]) * nodes[layer - 1][wStartNode];
             else
                 // This bias has nothing to do with that node
                 derivative = 0;
@@ -194,7 +233,7 @@ public class NeuralNet
             return derivative;
         }
 
-        // Most cases--use chain rule. This derivative (dhi_)/(dw___) = Sum{(dhi_)/(dhi-1_) * (dhi-1)/(dw___)}
+        // Most cases--use chain rule. This derivative (dhi_)/(dw___) = Sum{(dhi_)/(dhi-1_) * (dhi-1_)/(dw___)}
         if (wStartLayer + 1 < layer)
         {
             int prevLayerLength = nodes[layer - 1].Count;
@@ -227,7 +266,10 @@ public class NeuralNet
             double derivative;
 
             if (bEndNode == node)
-                derivative = activator.ActivationDerivative(nodes[layer][bEndNode]);
+                // endnode = activator(... + bias), so d_endnode/d_bias = d_activator/d_activator_input * d_activator_input/d_bias = d_activator/d_activator_input * 1
+                // Instead of actually giving the sigmoid input to the activator derivative function, we give the
+                // already-activated value, just because the calculation is simpler (sigmoid*(1-sigmoid)), and it's what we know: the node value
+                derivative = activator.ActivationDerivativeUsingActivated(nodes[layer][bEndNode]);
             else
                 // This bias has nothing to do with that node
                 derivative = 0;
@@ -235,7 +277,7 @@ public class NeuralNet
             return derivative;
         }
 
-        // Most cases--use chain rule. This derivative (dhi_)/(db__) = Sum{(dhi_)/(dhi-1_) * (dhi-1)/(db__)}
+        // Most cases--use chain rule. This derivative (dhi_)/(db__) = Sum{(dhi_)/(dhi-1_) * (dhi-1_)/(db__)}
         if (bStartLayer + 1 < layer)
         {
             int prevLayerLength = nodes[layer - 1].Count;
@@ -265,12 +307,15 @@ public class NeuralNet
         // Simple case for derivative
         if (endLayer == startLayer + 1)
         {
-            double derivative = activator.ActivationDerivative(nodes[endLayer][endNode]) * weights[startLayer][endNode, startNode];
+            // endnode = activator(w*startnode + ...), so d_endnode/d_startnode = d_activator/d_activator_input * d_activator_input/d_startnode = d_activator/d_activator_input * w
+            // Instead of actually giving the sigmoid input to the activator derivative function, we give the
+            // already-activated value, just because the calculation is simpler (sigmoid*(1-sigmoid)), and it's what we know: the node value
+            double derivative = activator.ActivationDerivativeUsingActivated(nodes[endLayer][endNode]) * weights[startLayer][endNode, startNode];
             nodeDerivativeCache[(endLayer, endNode, startLayer, startNode)] = derivative;
             return derivative;
         }
 
-        // Most cases--use chain rule. This derivative (dhi_)/(db__) = Sum{(dhi_)/(dhi-1_) * (dhi-1)/(db__)}
+        // Most cases--use chain rule. This derivative (dhi_)/(dj__) = Sum{(dhi_)/(dhi-1_) * (dhi-1_)/(dj__)}
         if (startLayer + 1 < endLayer)
         {
             int prevLayerLength = nodes[endLayer - 1].Count;

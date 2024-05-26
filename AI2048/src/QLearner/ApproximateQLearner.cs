@@ -1,17 +1,12 @@
 namespace AI2048;
 
 /// <summary>
-/// 
+/// Extension of QLearner that uses Approximate Q learning
 /// </summary>
 /// <typeparam name="S">Represents type of state</typeparam>
 /// <typeparam name="A">Represents type of action</typeparam>
-public class ApproximateQLearner<S, A> : QLearner<S, A>
+public class ApproximateQLearner<S, A>(IQLearnAgent<S, A> agent) : QLearner<S, A>(agent)
 {
-    // // // constructors
-
-    public ApproximateQLearner(IQLearnAgent<S, A> agent) : base(agent) {}
-
-
     // // // properties
 
     /// <summary>
@@ -60,8 +55,8 @@ public class ApproximateQLearner<S, A> : QLearner<S, A>
     /// <returns></returns>
     private double SafeGetWeight(string featureName)
     {
-        if (Weights.ContainsKey(featureName))
-            return Weights[featureName];
+        if (Weights.TryGetValue(featureName, out double value))
+            return value;
         return 0;
     }
 }

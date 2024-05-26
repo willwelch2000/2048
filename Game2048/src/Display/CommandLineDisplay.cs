@@ -32,6 +32,7 @@ public class CommandLineDisplay : IDisplay
 
     public void DisplayGame()
     {
+        Console.WriteLine();
         Console.WriteLine(Enumerable.Range(0, game.Dimension).Select(i => "+------").Append("+").Aggregate((current, next) => current + next));
         for (int i = 0; i < game.Dimension; i++) {
             Console.Write(Enumerable.Range(0, game.Dimension).Select(i => "|      ").Append("|\n|").Aggregate((current, next) => current + next));
@@ -42,6 +43,7 @@ public class CommandLineDisplay : IDisplay
                     Console.Write($"{game[i, j], 6}|");
             Console.Write("\n" + Enumerable.Range(0, game.Dimension).Select(i => "|      ").Append("|").Aggregate((current, next) => current + next));
             Console.WriteLine("\n" + Enumerable.Range(0, game.Dimension).Select(i => "+------").Append("+").Aggregate((current, next) => current + next));
+            Console.WriteLine();
         }
     }
 
