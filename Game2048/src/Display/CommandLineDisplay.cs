@@ -43,8 +43,8 @@ public class CommandLineDisplay : IDisplay
                     Console.Write($"{game[i, j], 6}|");
             Console.Write("\n" + Enumerable.Range(0, game.Dimension).Select(i => "|      ").Append("|").Aggregate((current, next) => current + next));
             Console.WriteLine("\n" + Enumerable.Range(0, game.Dimension).Select(i => "+------").Append("+").Aggregate((current, next) => current + next));
-            Console.WriteLine();
         }
+        Console.WriteLine();
     }
 
     private void DisplayGame(object? sender, EventArgs e)
