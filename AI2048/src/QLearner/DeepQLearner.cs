@@ -27,9 +27,7 @@ public class DeepQLearner<S, A> : QLearner<S, A>
     /// <summary>
     /// Number of moves made before the main network is copied to the target network
     /// </summary>
-    public int IterationsBeforeNetTransfer { get; set; }= 100;
-    
-    private readonly Sigmoid sigmoid = new();
+    public int IterationsBeforeNetTransfer { get; set; } = 100;
 
 
     // // // constructors
@@ -39,6 +37,22 @@ public class DeepQLearner<S, A> : QLearner<S, A>
         targetNet = new(agent.NeuralNetInputLayerSize, numMiddleNodes, agent.OutputSize, numMiddleLayers);
         mainNet = targetNet.Clone();
     }
+
+    public DeepQLearner(IQLearnAgent<S, A> agent, NeuralNet startingNet) : base(agent)
+    {
+        // Confirm that net has right size
+        if (startingNet.NumInputNodes != agent.NeuralNetInputLayerSize || startingNet.NumOutputNodes != agent.OutputSize)
+            throw new Exception($"Neural network should have input size of {agent.NeuralNetInputLayerSize} and output size of {agent.OutputSize}");
+
+        targetNet = startingNet.Clone();
+        mainNet = startingNet.Clone();
+    }
+
+
+    // // // properties
+
+    public NeuralNet MainNet => mainNet.Clone();
+    public NeuralNet TargetNet => targetNet.Clone();
 
 
     // // // methods
@@ -84,9 +98,9 @@ public class DeepQLearner<S, A> : QLearner<S, A>
         double valueNextState = GetValueFromQValues(nextState);
 
         // Output used for gradient descent is current output, 
-        // but with the node of the taken action changed to: reward + agent.Discount * next state value
+        // but with the node of the taken action changed to (activated): reward + agent.Discount * next state value
         Vector<double> output = mainNet.GetOutputValues(input);
-        output[agent.GetNodeNumberFromAction(action)] = sigmoid.Activate(reward + agent.Discount * valueNextState);
+        output[agent.GetNodeNumberFromAction(action)] = mainNet.Activator.Activate(reward + agent.Discount * valueNextState);
         
         targetNet.PerformGradientDescent(input, output);
 

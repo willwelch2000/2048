@@ -114,7 +114,7 @@ public class NeuralNetTests
         compare.SetWeight(0, 1, 0, 10);
         compare.SetBias(0, 0, -3);
 
-        Random random = new();
+        Random random = new(1000);
         for (int i = 0; i < 3000; i++)
         {
             Vector<double> input = Vector<double>.Build.DenseOfArray(random.NextDoubles(2));
@@ -122,9 +122,46 @@ public class NeuralNetTests
             net.PerformGradientDescent(input, output);
         }
 
-        for (int i = 0; i < net.Weights.Length; i++)
-            for (int j = 0; j < net.Weights[i].RowCount; j++)
-                for (int k = 0; k < net.Weights[i].ColumnCount; k++)
-                    Assert.IsTrue(net.Weights[i][j, k] > compare.Weights[i][j, k] - tolerance && net.Weights[i][j, k] < compare.Weights[i][j, k] + tolerance);
+        var weights = net.Weights.ToArray();
+        var compareWeights = compare.Weights.ToArray();
+        for (int i = 0; i < weights.Length; i++)
+            for (int j = 0; j < weights[i].RowCount; j++)
+                for (int k = 0; k < weights[i].ColumnCount; k++)
+                    Assert.IsTrue(weights[i][j, k] > compareWeights[i][j, k] - tolerance && weights[i][j, k] < compareWeights[i][j, k] + tolerance);
+    }
+
+    [TestMethod]
+    public void SaveNetToFileTest()
+    {
+        NeuralNet net1 = new(16, 50, 4, 2);
+        net1.SaveTrainingState("tempfileneuralnettest.txt");
+        NeuralNet net2 = Util.GetNeuralNetFromFile("tempfileneuralnettest.txt");
+
+        // Confirm equality
+
+        // Weights
+        int weights1Length = net1.Weights.Count();
+        int weights2Length = net2.Weights.Count();
+        Assert.AreEqual(weights1Length, weights2Length);
+        for (int i = 0; i < weights1Length; i++)
+        {
+            Matrix<double> weights1 = net1.Weights.ElementAt(i);
+            Matrix<double> weights2 = net2.Weights.ElementAt(i);
+            Assert.AreEqual(weights1, weights2);
+        }
+
+        // Biases
+        int biases1Length = net1.Biases.Count();
+        int biases2Length = net2.Biases.Count();
+        Assert.AreEqual(biases1Length, biases2Length);
+        for (int i = 0; i < biases1Length; i++)
+        {
+            Vector<double> biases1 = net1.Biases.ElementAt(i);
+            Vector<double> biases2 = net2.Biases.ElementAt(i);
+            Assert.AreEqual(biases1, biases2);
+        }
+
+        // Delete file
+        File.Delete("tempfileneuralnettest.txt");
     }
 }

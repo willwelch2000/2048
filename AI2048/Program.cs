@@ -9,7 +9,9 @@ public class Program
 {
     public static void Main()
     {
-        TrainAndTestDeepQLearning();
+        // 64, 76
+        // 256, 323
+        RunAndSaveToFile(Util.GetNeuralNetFromFile("neuralnet_256x2x50_5_28_v2.txt"), "neuralnet_256x2x50_5_28_v3.txt");
     }
 
     public static void NNTest() {
@@ -40,8 +42,9 @@ public class Program
         Vector<double> output = net.GetOutputValues(input);
 
         double y1 = output[1];
-        double h0 = net.Nodes[1][0];
-        double h1 = net.Nodes[1][1];
+        var nodes = net.Nodes.ToArray();
+        double h0 = nodes[1][0];
+        double h1 = nodes[1][1];
         double dh0dw010 = 0;
         double dh1dw010 = h1*(1-h1)*input[0];
         double dy0dw010 = y1*(1-y1)*(1*dh0dw010 - 1*dh1dw010);
@@ -95,5 +98,54 @@ public class Program
         Console.WriteLine($"Test rewards (training): {testReward}");
         Console.WriteLine($"Test score (post-training): {deepQLearner.AverageScore}");
         Console.WriteLine($"Test rewards (post-training): {deepQLearner.AverageRewards}");
+    }
+
+    public static void SaveToFileTest()
+    {
+        NeuralNet net1 = new(16, 50, 4, 2);
+        net1.SaveTrainingState("tempfileneuralnettest.txt");
+        NeuralNet net2 = Util.GetNeuralNetFromFile("tempfileneuralnettest.txt");
+
+        // Confirm equality
+
+        // Weights
+        int weights1Length = net1.Weights.Count();
+        int weights2Length = net2.Weights.Count();
+        for (int i = 0; i < weights1Length; i++)
+        {
+            Matrix<double> weights1 = net1.Weights.ElementAt(i);
+            Matrix<double> weights2 = net2.Weights.ElementAt(i);
+        }
+
+        // Biases
+        int biases1Length = net1.Biases.Count();
+        int biases2Length = net2.Biases.Count();
+        for (int i = 0; i < biases1Length; i++)
+        {
+            Vector<double> biases1 = net1.Biases.ElementAt(i);
+            Vector<double> biases2 = net2.Biases.ElementAt(i);
+        }
+
+        // Delete file
+        File.Delete("tempfileneuralnettest.txt");
+    }
+
+    public static void RunAndSaveToFile(NeuralNet? startingNet, string filename)
+    {
+        Agent2048 agent = new();
+        DeepQLearner<int[,], Direction> deepQLearner;
+        if (startingNet is not null)
+        {
+            deepQLearner = new(agent, startingNet);
+        }
+        else
+            deepQLearner = new(agent, 50, 2);
+        deepQLearner.Epsilon = 0.3;
+        deepQLearner.IterationsBeforeNetTransfer = 50;
+        _ = new CommandLineDisplay(agent.Game);
+        deepQLearner.PerformQLearning(1);
+        Console.WriteLine($"Test score: {deepQLearner.AverageScore}");
+        Console.WriteLine($"Test rewards: {deepQLearner.AverageRewards}");
+        deepQLearner.TargetNet.SaveTrainingState(filename);
     }
 }

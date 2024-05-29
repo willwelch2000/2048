@@ -131,6 +131,7 @@ public abstract class QLearner<S, A>(IQLearnAgent<S, A> agent)
 
     /// <summary>
     /// Update weights given a move
+    /// Also, update TotalRewards statistic here
     /// </summary>
     /// <param name="state"></param>
     /// <param name="action"></param>
@@ -182,6 +183,40 @@ public abstract class QLearner<S, A>(IQLearnAgent<S, A> agent)
                 else
                     Epsilon = MinEpsilon;
             }
+        }
+    }
+
+    /// <summary>
+    /// Just takes the optimal move each time and doesn't learn
+    /// This is done at the end to see how well it does
+    /// </summary>
+    /// <param name="episodes"></param>
+    public void PerformWithoutTraining(int episodes)
+    {
+        // Iterate x episodes
+        for (int episodeNum = 0; episodeNum < episodes; episodeNum++)
+        {
+            agent.Restart();
+            S state = agent.GetGameState();
+
+            // Continue until game is over
+            while (!agent.IsTerminal(state))
+            {
+                // Choose a move--use GetActionFromQValues to get action based on training, with no variation
+                A? nullableAction = GetActionFromQValues(state);
+                // Move shouldn't ever be null--otherwise it would be terminal--but just in case
+                if (nullableAction is A action)
+                {
+                    // Do the action
+                    agent.PerformAction(action);
+                }
+                else
+                    break;
+            }
+
+            // Update score variables
+            TotalScore += agent.GetScore(state);
+            EpisodesCompleted++;
         }
     }
 

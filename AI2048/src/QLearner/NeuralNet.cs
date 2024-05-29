@@ -30,7 +30,7 @@ public class NeuralNet
     /// <summary>
     /// activation function used
     /// </summary>
-    private readonly IActivationFunction activator;
+    public IActivationFunction Activator { get; private set; }
 
     /// <summary>
     /// All nodes in the network
@@ -73,7 +73,7 @@ public class NeuralNet
             biases[i] = Vector<double>.Build.Random(numMiddleNodes);
 
         // Initialize activator
-        this.activator = activator;
+        Activator = activator;
 
         // Initialize nodes
         nodes = new Vector<double>[numMiddleLayers + 2];
@@ -96,8 +96,17 @@ public class NeuralNet
     /// </summary>
     public double Alpha { get; set; } = 10;
 
-    public Vector<double>[] Nodes => nodes;
-    public Matrix<double>[] Weights => weights;
+    /// <summary>
+    /// Accessor for node values in the network
+    /// </summary>
+    public IEnumerable<Vector<double>> Nodes => nodes.Select(n => n.Clone());
+    public IEnumerable<Matrix<double>> Weights => weights.Select(w => w.Clone());
+    public IEnumerable<Vector<double>> Biases => biases.Select(b => b.Clone());
+
+    public int NumInputNodes => nodes[0].Count;
+    public int NumMiddleNodes => nodes[^2].Count;
+    public int NumOutputNodes => nodes[^1].Count;
+    public int NumMiddleLayers => nodes.Length - 2;
 
 
     // // // methods
@@ -116,7 +125,7 @@ public class NeuralNet
             Vector<double> layerBiases = biases[layer];
 
             // Perform matrix operation to get from currentLayer to nextLayer
-            (layerWeights * nodes[layer] + layerBiases).Map(activator.Activate, nodes[layer + 1]);
+            (layerWeights * nodes[layer] + layerBiases).Map(Activator.Activate, nodes[layer + 1]);
         }
 
         ResetDerivativeCaches();
@@ -225,7 +234,7 @@ public class NeuralNet
                 // endnode = activator(w*startnode + ...), so d_endnode/dw = d_activator/d_activator_input * d_activator_input/dw = d_activator/d_activator_input * startnode
                 // Instead of actually giving the sigmoid input to the activator derivative function, we give the
                 // already-activated value, just because the calculation is simpler (sigmoid*(1-sigmoid)), and it's what we know: the node value
-                derivative = activator.ActivationDerivativeUsingActivated(nodes[layer][node]) * nodes[layer - 1][wStartNode];
+                derivative = Activator.ActivationDerivativeUsingActivated(nodes[layer][node]) * nodes[layer - 1][wStartNode];
             else
                 // This bias has nothing to do with that node
                 derivative = 0;
@@ -269,7 +278,7 @@ public class NeuralNet
                 // endnode = activator(... + bias), so d_endnode/d_bias = d_activator/d_activator_input * d_activator_input/d_bias = d_activator/d_activator_input * 1
                 // Instead of actually giving the sigmoid input to the activator derivative function, we give the
                 // already-activated value, just because the calculation is simpler (sigmoid*(1-sigmoid)), and it's what we know: the node value
-                derivative = activator.ActivationDerivativeUsingActivated(nodes[layer][bEndNode]);
+                derivative = Activator.ActivationDerivativeUsingActivated(nodes[layer][bEndNode]);
             else
                 // This bias has nothing to do with that node
                 derivative = 0;
@@ -310,7 +319,7 @@ public class NeuralNet
             // endnode = activator(w*startnode + ...), so d_endnode/d_startnode = d_activator/d_activator_input * d_activator_input/d_startnode = d_activator/d_activator_input * w
             // Instead of actually giving the sigmoid input to the activator derivative function, we give the
             // already-activated value, just because the calculation is simpler (sigmoid*(1-sigmoid)), and it's what we know: the node value
-            double derivative = activator.ActivationDerivativeUsingActivated(nodes[endLayer][endNode]) * weights[startLayer][endNode, startNode];
+            double derivative = Activator.ActivationDerivativeUsingActivated(nodes[endLayer][endNode]) * weights[startLayer][endNode, startNode];
             nodeDerivativeCache[(endLayer, endNode, startLayer, startNode)] = derivative;
             return derivative;
         }
