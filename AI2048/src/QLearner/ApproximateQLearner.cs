@@ -35,10 +35,9 @@ public class ApproximateQLearner<S, A>(IQLearnAgent<S, A> agent) : QLearner<S, A
     /// <param name="state"></param>
     /// <param name="action"></param>
     /// <param name="nextState"></param>
-    public override void Update(S state, A action, S nextState)
+    public override void Update(S state, A action, S nextState, double reward)
     {
         Dictionary<string, double> features = agent.GetFeatures(state, action);
-        double reward = agent.GetReward(state, action, nextState);
         double valueNextState = GetValueFromQValues(nextState);
         double qValue = GetQValue(state, action);
         double correction = reward + agent.Discount * valueNextState - qValue;
