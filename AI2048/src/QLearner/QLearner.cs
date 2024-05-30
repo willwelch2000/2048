@@ -209,6 +209,7 @@ public abstract class QLearner<S, A>(IQLearnAgent<S, A> agent)
                 {
                     // Do the action
                     agent.PerformAction(action);
+                    state = agent.GetGameState();
                 }
                 else
                     break;
