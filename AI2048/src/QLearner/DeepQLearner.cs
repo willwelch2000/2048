@@ -89,12 +89,11 @@ public class DeepQLearner<S, A> : QLearner<S, A>
         return output[agent.GetNodeNumberFromAction(action)];
     }
 
-    public override void Update(S state, A action, S nextState)
+    public override void Update(S state, A action, S nextState, double reward)
     {
         // Input is neural net features
         Vector<double> input = agent.GetNeuralNetFeatures(state);
 
-        double reward = agent.GetReward(state, action, nextState);
         double valueNextState = GetValueFromQValues(nextState);
 
         // Output used for gradient descent is current output, 

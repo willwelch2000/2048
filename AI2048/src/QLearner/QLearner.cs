@@ -131,12 +131,12 @@ public abstract class QLearner<S, A>(IQLearnAgent<S, A> agent)
 
     /// <summary>
     /// Update weights given a move
-    /// Also, update TotalRewards statistic here
     /// </summary>
     /// <param name="state"></param>
     /// <param name="action"></param>
     /// <param name="nextState"></param>
-    public abstract void Update(S state, A action, S nextState);
+    /// <param name="reward"></param>
+    public abstract void Update(S state, A action, S nextState, double reward);
 
     /// <summary>
     /// Iterate through episodes, updating weights and score counters
@@ -161,9 +161,15 @@ public abstract class QLearner<S, A>(IQLearnAgent<S, A> agent)
                     // Do the action and get updated state
                     agent.PerformAction(action);
                     S nextState = agent.GetGameState();
-                    // Update the weights accordingly
-                    Update(state, action, nextState);
 
+                    // Get reward
+                    double reward = agent.GetReward(state, action, nextState);
+                    TotalRewards += reward;
+
+                    // Update the weights accordingly
+                    Update(state, action, nextState, reward);
+
+                    // Replace state with new state
                     state = nextState;
                 }
                 else
@@ -207,9 +213,16 @@ public abstract class QLearner<S, A>(IQLearnAgent<S, A> agent)
                 // Move shouldn't ever be null--otherwise it would be terminal--but just in case
                 if (nullableAction is A action)
                 {
-                    // Do the action
+                    // Do the action and get updated state
                     agent.PerformAction(action);
-                    state = agent.GetGameState();
+                    S nextState = agent.GetGameState();
+
+                    // Get reward
+                    double reward = agent.GetReward(state, action, nextState);
+                    TotalRewards += reward;
+
+                    // Replace state with new state
+                    state = nextState;
                 }
                 else
                     break;
