@@ -46,7 +46,7 @@ public static class Util
         streamWriter.Close();
     }
 
-    public static NeuralNet GetNeuralNetFromFile(string filename)
+    public static NeuralNet GetNeuralNetFromFile(string filename, IActivationFunction activationFunction)
     {
         StreamReader streamReader= new(filename);
 
@@ -55,7 +55,7 @@ public static class Util
         int numOutputNodes = streamReader.ParseIntFromNextLine();
         int numMiddleLayers = streamReader.ParseIntFromNextLine();
 
-        NeuralNet neuralNet = new(numInputNodes, numMiddleNodes, numOutputNodes, numMiddleLayers);
+        NeuralNet neuralNet = new(numInputNodes, numMiddleNodes, numOutputNodes, numMiddleLayers, activationFunction);
 
         // Weights
         int startLayer = 0;

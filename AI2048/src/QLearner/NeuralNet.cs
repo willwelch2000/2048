@@ -345,7 +345,7 @@ public class NeuralNet
 
     public NeuralNet Clone()
     {
-        NeuralNet clone = new(nodes[0].Count, nodes[1].Count, nodes[^1].Count, weights.Length - 1);
+        NeuralNet clone = new(nodes[0].Count, nodes[1].Count, nodes[^1].Count, weights.Length - 1, Activator);
         for (int i = 0; i < weights.Length; i++)
         {
             clone.weights[i] = weights[i].Clone();

@@ -113,6 +113,7 @@ public class DeepQLearner<S, A> : QLearner<S, A>
         // Output used for gradient descent is current output, 
         // but with the node of the taken action changed to (activated): reward + agent.Discount * next state value
         Vector<double> output = mainNet.GetOutputValues(input);
+        // TODO change the following--it doesn't make sense
         output[agent.GetNodeNumberFromAction(action)] = mainNet.Activator.Activate(reward + agent.Discount * valueNextState);
         
         targetNet.PerformGradientDescent(input, output);

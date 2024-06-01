@@ -102,19 +102,20 @@ public class Agent2048 : IQLearnAgent<int[,], Direction>
     /// <returns></returns>
     public double GetReward(int[,] state, Direction action, int[,] nextState)
     {
-        // return ValueCombined(FlattenIntMatrix(state).ToArray(), FlattenIntMatrix(nextState).ToArray());
-
         int[] flattenedState = FlattenIntMatrix(state).ToArray();
         int[] flattenedNextState = FlattenIntMatrix(nextState).ToArray();
 
         double maxOriginal = flattenedState.Max();
         double maxNext = flattenedNextState.Max();
+
         // If increases score, return increase of tile
         if (maxOriginal < maxNext)
             return maxNext - maxOriginal;
-        // If less free space, return -1
-        if (flattenedNextState.Where(i => i > 0).Count() > flattenedState.Where(i => i > 0).Count())
-            return -1;
+
+        // If less free space, return 0
+        if (flattenedNextState.Count(i => i > 0) > flattenedState.Count(i => i > 0))
+            return 0;
+
         // Otherwise, we had a combination--return 1
         return 1;
     }
