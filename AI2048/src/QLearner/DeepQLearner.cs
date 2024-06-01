@@ -108,7 +108,8 @@ public class DeepQLearner<S, A> : QLearner<S, A>
         // Input is neural net features
         Vector<double> input = agent.GetNeuralNetFeatures(state);
 
-        double valueNextState = GetValueFromQValues(nextState);
+        // If next state is terminal, value is 0. Otherwise, get the value from q values
+        double valueNextState = agent.IsTerminal(nextState) ? 0 : GetValueFromQValues(nextState);
 
         // Output used for gradient descent is current output, 
         // but with the node of the taken action changed to (activated): reward + agent.Discount * next state value
