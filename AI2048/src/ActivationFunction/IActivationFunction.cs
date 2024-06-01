@@ -6,14 +6,20 @@ namespace AI2048.Deep;
 /// </summary>
 public interface IActivationFunction
 {
-    public double Activate(double input);
-    public double ActivationDerivative(double input);
+    /// <summary>
+    /// Perform the activation function on x
+    /// </summary>
+    /// <param name="x"></param>
+    /// <returns></returns>
+    public double Activate(double x);
 
     /// <summary>
-    /// For some (i.e. sigmoid), it's more useful to input the already-activated number when finding the derivative
-    /// This accepts activator(x) as the input and returns d_activator(x)/dx
+    /// Find the derivative of the activation function at the given point
+    /// For some (i.e. sigmoid), it's more useful to input the already-activated number (y) when finding the derivative
+    /// So this accepts x or activator(x) as the input and returns d_activator(x)/dx
     /// </summary>
-    /// <param name="activated"></param>
+    /// <param name="input">the x or y coordinate of the point to find the derivative of</param>
+    /// <param name="giveY">true if the y value was given</param>
     /// <returns></returns>
-    public double ActivationDerivativeUsingActivated(double activated);
+    public double ActivationDerivative(double input, bool giveY);
 }

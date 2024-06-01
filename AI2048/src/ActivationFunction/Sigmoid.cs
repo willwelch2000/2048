@@ -5,29 +5,22 @@ namespace AI2048.Deep;
 /// </summary>
 public class Sigmoid : IActivationFunction
 {
-    public double Activate(double input)
-    {
-        return 1 / (1 + Math.Exp(-input));
-    }
+    public double Activate(double x) =>
+        1 / (1 + Math.Exp(-x));
 
     /// <summary>
-    /// Derivative of sigmoid(x) = sigmoid(x) * (1 - sigmoid(x))
+    /// Derivative of sigmoid(x) = sigmoid(x) * (1 - sigmoid(x)) = y * (1 - y)
     /// </summary>
-    /// <param name="input"></param>
+    /// <param name="input">x or y</param>
+    /// <param name="giveY">true if y is given</param>
     /// <returns></returns>
-    public double ActivationDerivative(double input)
+    public double ActivationDerivative(double input, bool giveY)
     {
-        double activated = Activate(input);
-        return ActivationDerivativeUsingActivated(activated);
-    }
-
-    /// <summary>
-    /// Derivative of sigmoid(x) = sigmoid(x) * (1 - sigmoid(x))
-    /// </summary>
-    /// <param name="activated"></param>
-    /// <returns></returns>
-    public double ActivationDerivativeUsingActivated(double activated)
-    {
-        return activated * (1 - activated);
+        // If y is given, just return y * (1 - y)
+        if (giveY)
+            return input * (1 - input);
+        // Otherwise, calculate y and return y * (1 - y)
+        double y = Activate(input);
+        return y * (1 - y);
     }
 }

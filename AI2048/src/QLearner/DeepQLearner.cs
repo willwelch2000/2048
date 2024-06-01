@@ -32,9 +32,12 @@ public class DeepQLearner<S, A> : QLearner<S, A>
 
     // // // constructors
 
-    public DeepQLearner(IQLearnAgent<S, A> agent, int numMiddleNodes, int numMiddleLayers) : base(agent)
+    public DeepQLearner(IQLearnAgent<S, A> agent, int numMiddleNodes, int numMiddleLayers, IActivationFunction? activator = null) : base(agent)
     {
-        targetNet = new(agent.NeuralNetInputLayerSize, numMiddleNodes, agent.OutputSize, numMiddleLayers);
+        if (activator is null)
+            targetNet = new(agent.NeuralNetInputLayerSize, numMiddleNodes, agent.OutputSize, numMiddleLayers);
+        else
+            targetNet = new(agent.NeuralNetInputLayerSize, numMiddleNodes, agent.OutputSize, numMiddleLayers, activator);
         mainNet = targetNet.Clone();
     }
 
@@ -52,7 +55,18 @@ public class DeepQLearner<S, A> : QLearner<S, A>
     // // // properties
 
     public NeuralNet MainNet => mainNet.Clone();
+
     public NeuralNet TargetNet => targetNet.Clone();
+
+    public override double Alpha
+    {
+        get => targetNet.Alpha;
+        set
+        {
+            mainNet.Alpha = value;
+            targetNet.Alpha = value;
+        }
+    }
 
 
     // // // methods

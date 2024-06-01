@@ -23,7 +23,7 @@ public abstract class QLearner<S, A>(IQLearnAgent<S, A> agent)
     /// Learning factor. How quickly Q value changes.
     /// In range [0, 1]
     /// </summary>
-    public double Alpha { get; set; } = 0.004;
+    public virtual double Alpha { get; set; } = 0.004;
 
     /// <summary>
     /// Starting deviation factor. Percentage that we act randomly.
