@@ -11,16 +11,8 @@ public class Sigmoid : IActivationFunction
     /// <summary>
     /// Derivative of sigmoid(x) = sigmoid(x) * (1 - sigmoid(x)) = y * (1 - y)
     /// </summary>
-    /// <param name="input">x or y</param>
-    /// <param name="giveY">true if y is given</param>
+    /// <param name="y">the y coordinate of the point to find the derivative of</param>
     /// <returns></returns>
-    public double ActivationDerivative(double input, bool giveY)
-    {
-        // If y is given, just return y * (1 - y)
-        if (giveY)
-            return input * (1 - input);
-        // Otherwise, calculate y and return y * (1 - y)
-        double y = Activate(input);
-        return y * (1 - y);
-    }
+    public double ActivationDerivative(double y) =>
+        y * (1 - y);
 }

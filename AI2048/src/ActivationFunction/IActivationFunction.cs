@@ -14,12 +14,10 @@ public interface IActivationFunction
     public double Activate(double x);
 
     /// <summary>
-    /// Find the derivative of the activation function at the given point
-    /// For some (i.e. sigmoid), it's more useful to input the already-activated number (y) when finding the derivative
-    /// So this accepts x or activator(x) as the input and returns d_activator(x)/dx
+    /// Find the derivative of the activation function at the given y value
+    /// We know the y value, so that is what must be passed in
     /// </summary>
-    /// <param name="input">the x or y coordinate of the point to find the derivative of</param>
-    /// <param name="giveY">true if the y value was given</param>
+    /// <param name="y">the y coordinate of the point to find the derivative of</param>
     /// <returns></returns>
-    public double ActivationDerivative(double input, bool giveY);
+    public double ActivationDerivative(double y);
 }

@@ -5,32 +5,13 @@ namespace AI2048.Deep;
 /// <summary>
 /// Implements a nerual network
 /// Calculation is done like this:
-///     nodes[i+1] = weights[i] * nodes[i] + biases[i]
+///     nodes[i+1] = activator(weights[i] * nodes[i] + biases[i])
 /// </summary>
 public class NeuralNet
 {
     // // // fields
-
-    /// <summary>
-    /// Array of matrices
-    /// Each entry in a matrix is the weight from a starting node to an ending node
-    /// indexed like w[end node, start node]
-    /// There is a matrix for each layer-to-layer transformation
-    /// matrix * (layer as column vector) + biases = next layer
-    /// </summary>
-    private Matrix<double>[] weights;
-
-    /// <summary>
-    /// Array of biases
-    /// Each entry in a vector is the bias for a given node in a given layer
-    /// There is a vector for each layer-to-layer transformation
-    /// </summary>
-    private Vector<double>[] biases;
-
-    /// <summary>
-    /// activation function used
-    /// </summary>
-    public IActivationFunction Activator { get; private set; }
+    
+    private readonly LayerTransform[] layerTransforms;
 
     /// <summary>
     /// All nodes in the network
@@ -57,23 +38,35 @@ public class NeuralNet
     /// <param name="numOutputNodes">Number of nodes for output layer</param>
     /// <param name="numMiddleLayers">Number of middle layers</param>
     /// <param name="activator"></param>
-    public NeuralNet(int numInputNodes, int numMiddleNodes, int numOutputNodes, int numMiddleLayers, IActivationFunction activator)
+    public NeuralNet(int numInputNodes, int numMiddleNodes, int numOutputNodes, int numMiddleLayers, IActivationFunction? primaryActivator)
     {
-        // Initialize weights
-        weights = new Matrix<double>[numMiddleLayers + 1];
-        weights[0] = Matrix<double>.Build.Random(numMiddleLayers > 0 ? numMiddleNodes : numOutputNodes, numInputNodes);
-        weights[^1] = Matrix<double>.Build.Random(numOutputNodes, numMiddleLayers > 0 ? numMiddleNodes : numInputNodes);
+        // Initialize layer transforms
+        layerTransforms = new LayerTransform[numMiddleLayers + 1];
+
+        // First transform
+        layerTransforms[0] = new(
+            Matrix<double>.Build.Random(numMiddleLayers > 0 ? numMiddleNodes : numOutputNodes, numInputNodes),
+            Vector<double>.Build.Random(numMiddleNodes))
+            {
+                Activator = primaryActivator
+            };
+
+        // Last transform
+        layerTransforms[^1] = new(
+            Matrix<double>.Build.Random(numOutputNodes, numMiddleLayers > 0 ? numMiddleNodes : numInputNodes),
+            Vector<double>.Build.Random(numOutputNodes))
+            {
+                Activator = primaryActivator
+            };
+
+        // All other transforms
         for (int i = 1; i < numMiddleLayers; i++)
-            weights[i] = Matrix<double>.Build.Random(numMiddleNodes, numMiddleNodes);
-
-        // Initialize biases
-        biases = new Vector<double>[numMiddleLayers + 1];
-        biases[^1] = Vector<double>.Build.Random(numOutputNodes);
-        for (int i = 0; i < numMiddleLayers; i++)
-            biases[i] = Vector<double>.Build.Random(numMiddleNodes);
-
-        // Initialize activator
-        Activator = activator;
+            layerTransforms[i] = new(
+                Matrix<double>.Build.Random(numMiddleNodes, numMiddleNodes),
+                Vector<double>.Build.Random(numMiddleNodes))
+                {
+                    Activator = primaryActivator
+                };
 
         // Initialize nodes
         nodes = new Vector<double>[numMiddleLayers + 2];
@@ -91,6 +84,8 @@ public class NeuralNet
 
     // // // properties
 
+    public IEnumerable<LayerTransform> LayerTransforms => layerTransforms.AsEnumerable();
+
     /// <summary>
     /// Learning factor. How quickly weights change.
     /// </summary>
@@ -100,8 +95,6 @@ public class NeuralNet
     /// Accessor for node values in the network
     /// </summary>
     public IEnumerable<Vector<double>> Nodes => nodes.Select(n => n.Clone());
-    public IEnumerable<Matrix<double>> Weights => weights.Select(w => w.Clone());
-    public IEnumerable<Vector<double>> Biases => biases.Select(b => b.Clone());
 
     public int NumInputNodes => nodes[0].Count;
     public int NumMiddleNodes => nodes[^2].Count;
@@ -119,31 +112,20 @@ public class NeuralNet
     public Vector<double> GetOutputValues(Vector<double> input)
     {
         nodes[0] = input.Clone();
-        for (int layer = 0; layer < weights.Length; layer++)
-        {
-            Matrix<double> layerWeights = weights[layer];
-            Vector<double> layerBiases = biases[layer];
-
-            // Perform matrix operation to get from currentLayer to nextLayer
-            (layerWeights * nodes[layer] + layerBiases).Map(Activator.Activate, nodes[layer + 1]);
-        }
-
-        ResetDerivativeCaches();
+        for (int i = 0; i < layerTransforms.Length; i++)
+            layerTransforms[i].TransformLayer(nodes[i], nodes[i + 1]);
 
         return nodes.Last();
     }
 
-    public void SetWeight(int startLayer, int startNode, int endNode, double value)
-    {
-        weights[startLayer][endNode, startNode] = value;
-        ResetDerivativeCaches();
-    }
+    public void SetWeight(int startLayer, int startNode, int endNode, double value) =>
+        layerTransforms[startLayer].Weights[endNode, startNode] = value;
 
-    public void SetBias(int startLayer, int endNode, double value)
-    {
-        biases[startLayer][endNode] = value;
-        ResetDerivativeCaches();
-    }
+    public void SetBias(int startLayer, int endNode, double value) =>
+        layerTransforms[startLayer].Biases[endNode] = value;
+
+    public void SetActivator(int startLayer, IActivationFunction? activator) =>
+        layerTransforms[startLayer].Activator = activator;
 
     /// <summary>
     /// Given a single set of input value and its desired output, adjust the weights accordingly
@@ -153,24 +135,26 @@ public class NeuralNet
     /// <param name="compare">desired output</param>
     public void PerformGradientDescent(Vector<double> input, Vector<double> compare)
     {
-        // Create new set of matrices for weights
-        Matrix<double>[] newWeights = new Matrix<double>[weights.Length];
-        for (int i = 0; i < weights.Length; i++)
-            newWeights[i] = weights[i].Clone();
+        ResetDerivativeCaches();
+
+        // // Create new set of matrices for weights
+        // Matrix<double>[] newWeights = new Matrix<double>[weights.Length];
+        // for (int i = 0; i < weights.Length; i++)
+        //     newWeights[i] = weights[i].Clone();
             
-        // Create new set of vectors for biases
-        Vector<double>[] newBiases = new Vector<double>[weights.Length];
-        for (int i = 0; i < biases.Length; i++)
-            newBiases[i] = biases[i].Clone();
+        // // Create new set of vectors for biases
+        // Vector<double>[] newBiases = new Vector<double>[weights.Length];
+        // for (int i = 0; i < biases.Length; i++)
+        //     newBiases[i] = biases[i].Clone();
 
         Vector<double> output = GetOutputValues(input);
         int outputLength = output.Count;
 
         // Iterate through all layers
-        for (int layer = 0; layer < weights.Length; layer++)
+        for (int layer = 0; layer < layerTransforms.Length; layer++)
         {
-            Matrix<double> layerWeightMatrix = newWeights[layer];
-            Vector<double> layerBiasVector = newBiases[layer];
+            Matrix<double> layerWeightMatrix = layerTransforms[layer].Weights.Clone();
+            Vector<double> layerBiasVector = layerTransforms[layer].Biases.Clone();
 
             // Iterate through all end nodes of next layer
             for (int endNode = 0; endNode < layerWeightMatrix.RowCount; endNode++)
@@ -193,10 +177,10 @@ public class NeuralNet
                     bSum += (output[outputNode] - compare[outputNode]) * BiasDerivative(nodes.Length - 1, outputNode, layer, endNode);
                 layerBiasVector[endNode] -= 2 / ((double) outputLength) * Alpha*bSum;
             }
-        }
 
-        weights = newWeights;
-        biases = newBiases;
+            layerTransforms[layer].Weights = layerWeightMatrix;
+            layerTransforms[layer].Biases = layerBiasVector;
+        }
     }
 
     /// <summary>
@@ -223,8 +207,8 @@ public class NeuralNet
     public double WeightDerivative(int layer, int node, int wStartLayer, int wEndNode, int wStartNode)
     {
         // Already cached
-        if (weightDerivativeCache.ContainsKey((layer, node, wStartLayer, wEndNode, wStartNode)))
-            return weightDerivativeCache[(layer, node, wStartLayer, wEndNode, wStartNode)];
+        if (weightDerivativeCache.TryGetValue((layer, node, wStartLayer, wEndNode, wStartNode), out double value))
+            return value;
 
         // Simple case for derivative
         if (layer == wStartLayer + 1)
@@ -234,9 +218,9 @@ public class NeuralNet
                 // endnode = activator(w*startnode + ...), so d_endnode/dw = d_activator/d_activator_input * d_activator_input/dw = d_activator/d_activator_input * startnode
                 // Instead of actually giving the sigmoid input to the activator derivative function, we give the
                 // already-activated value, just because the calculation is simpler (sigmoid*(1-sigmoid)), and it's what we know: the node value
-                derivative = Activator.ActivationDerivative(nodes[layer][node], true) * nodes[layer - 1][wStartNode];
+                derivative = layerTransforms[wStartLayer].ActivationDerivative(nodes[layer][node]) * nodes[layer - 1][wStartNode];
             else
-                // This bias has nothing to do with that node
+                // This weight has nothing to do with that node
                 derivative = 0;
             weightDerivativeCache[(layer, node, wStartLayer, wEndNode, wStartNode)] = derivative;
             return derivative;
@@ -278,7 +262,7 @@ public class NeuralNet
                 // endnode = activator(... + bias), so d_endnode/d_bias = d_activator/d_activator_input * d_activator_input/d_bias = d_activator/d_activator_input * 1
                 // Instead of actually giving the sigmoid input to the activator derivative function, we give the
                 // already-activated value, just because the calculation is simpler (sigmoid*(1-sigmoid)), and it's what we know: the node value
-                derivative = Activator.ActivationDerivative(nodes[layer][bEndNode], true);
+                derivative = layerTransforms[bStartLayer].ActivationDerivative(nodes[layer][bEndNode]);
             else
                 // This bias has nothing to do with that node
                 derivative = 0;
@@ -319,7 +303,7 @@ public class NeuralNet
             // endnode = activator(w*startnode + ...), so d_endnode/d_startnode = d_activator/d_activator_input * d_activator_input/d_startnode = d_activator/d_activator_input * w
             // Instead of actually giving the sigmoid input to the activator derivative function, we give the
             // already-activated value, just because the calculation is simpler (sigmoid*(1-sigmoid)), and it's what we know: the node value
-            double derivative = Activator.ActivationDerivative(nodes[endLayer][endNode], true) * weights[startLayer][endNode, startNode];
+            double derivative = layerTransforms[startLayer].ActivationDerivative(nodes[endLayer][endNode]) * layerTransforms[startLayer].Weights[endNode, startNode];
             nodeDerivativeCache[(endLayer, endNode, startLayer, startNode)] = derivative;
             return derivative;
         }
@@ -345,12 +329,11 @@ public class NeuralNet
 
     public NeuralNet Clone()
     {
-        NeuralNet clone = new(nodes[0].Count, nodes[1].Count, nodes[^1].Count, weights.Length - 1, Activator);
-        for (int i = 0; i < weights.Length; i++)
-        {
-            clone.weights[i] = weights[i].Clone();
-            clone.biases[i] = biases[i].Clone();
-        }
+        NeuralNet clone = new(nodes[0].Count, nodes[1].Count, nodes[^1].Count, layerTransforms.Length - 1);
+        for (int i = 0; i < layerTransforms.Length; i++)
+            clone.layerTransforms[i] = layerTransforms[i].Clone();
+        for (int i = 0; i < nodes.Length; i++)
+            clone.nodes[i] = nodes[i].Clone();
         return clone;
     }
 }

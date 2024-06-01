@@ -33,13 +33,13 @@ public static class Util
         streamWriter.WriteLine(neuralNet.NumMiddleLayers);
 
         // Weights
-        foreach (Matrix<double> weightMatrix in neuralNet.Weights)
+        foreach (Matrix<double> weightMatrix in neuralNet.LayerTransforms.Select(t => t.Weights))
             for (int i = 0; i < weightMatrix.RowCount; i++)
                 for (int j = 0; j < weightMatrix.ColumnCount; j++)
                     streamWriter.WriteLine(weightMatrix.At(i, j));
 
         // Biases
-        foreach (Vector<double> biasVector in neuralNet.Biases)
+        foreach (Vector<double> biasVector in neuralNet.LayerTransforms.Select(t => t.Biases))
             for (int i = 0; i < biasVector.Count; i++)
                 streamWriter.WriteLine(biasVector[i]);
 
@@ -59,7 +59,7 @@ public static class Util
 
         // Weights
         int startLayer = 0;
-        foreach (Matrix<double> weightMatrix in neuralNet.Weights)
+        foreach (Matrix<double> weightMatrix in neuralNet.LayerTransforms.Select(t => t.Weights))
         {
             for (int i = 0; i < weightMatrix.RowCount; i++)
                 for (int j = 0; j < weightMatrix.ColumnCount; j++)
@@ -69,7 +69,7 @@ public static class Util
 
         // Biases
         startLayer = 0;
-        foreach (Vector<double> biasVector in neuralNet.Biases)
+        foreach (Vector<double> biasVector in neuralNet.LayerTransforms.Select(t => t.Biases))
         {
             for (int i = 0; i < biasVector.Count; i++)
                 neuralNet.SetBias(startLayer, i, streamReader.ParseDoubleFromNextLine());

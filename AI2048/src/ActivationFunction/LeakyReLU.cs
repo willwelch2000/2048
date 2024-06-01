@@ -1,7 +1,7 @@
 namespace AI2048.Deep;
 
 /// <summary>
-/// Implements IActivationFunction as the sigmoid function: 1/(1+e^(-x))
+/// Implements IActivationFunction as the leaky ReLU function
 /// </summary>
 public class LeakyReLU : IActivationFunction
 {
@@ -10,6 +10,6 @@ public class LeakyReLU : IActivationFunction
     public double Activate(double x) =>
         x > 0 ? x : subZeroSlope * x;
 
-    public double ActivationDerivative(double input, bool giveY) =>
-        input > 0 ? 1 : subZeroSlope;
+    public double ActivationDerivative(double y) =>
+        y > 0 ? 1 : subZeroSlope;
 }
