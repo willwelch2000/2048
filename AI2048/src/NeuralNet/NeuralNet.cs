@@ -115,7 +115,7 @@ public class NeuralNet
         for (int i = 0; i < layerTransforms.Length; i++)
             layerTransforms[i].TransformLayer(nodes[i], nodes[i + 1]);
 
-        return nodes.Last();
+        return nodes.Last().Clone();
     }
 
     public void SetWeight(int startLayer, int startNode, int endNode, double value) =>
@@ -136,16 +136,6 @@ public class NeuralNet
     public void PerformGradientDescent(Vector<double> input, Vector<double> compare)
     {
         ResetDerivativeCaches();
-
-        // // Create new set of matrices for weights
-        // Matrix<double>[] newWeights = new Matrix<double>[weights.Length];
-        // for (int i = 0; i < weights.Length; i++)
-        //     newWeights[i] = weights[i].Clone();
-            
-        // // Create new set of vectors for biases
-        // Vector<double>[] newBiases = new Vector<double>[weights.Length];
-        // for (int i = 0; i < biases.Length; i++)
-        //     newBiases[i] = biases[i].Clone();
 
         Vector<double> output = GetOutputValues(input);
         int outputLength = output.Count;

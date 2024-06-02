@@ -11,17 +11,6 @@ public class DeepQLearner<S, A> : QLearner<S, A>
 {
     // fields
 
-    // /// <summary>
-    // /// network that gets changed by training
-    // /// </summary>
-    // private NeuralNet targetNet;
-
-    // /// <summary>
-    // /// network that is used for training as a reference
-    // /// gets replaced with the target network after several iterations
-    // /// </summary>
-    // private NeuralNet mainNet;
-
     private int iterationCounter;
 
 
@@ -54,8 +43,15 @@ public class DeepQLearner<S, A> : QLearner<S, A>
     /// </summary>
     public int IterationsBeforeNetTransfer { get; set; } = 100;
 
+    /// <summary>
+    /// network that is used for training as a reference
+    /// gets replaced with the target network after several iterations
+    /// </summary>
     public NeuralNet MainNet { get; private set; }
 
+    /// <summary>
+    /// network that gets changed by training
+    /// </summary>
     public NeuralNet TargetNet { get; private set; }
 
     public override double Alpha
@@ -108,25 +104,22 @@ public class DeepQLearner<S, A> : QLearner<S, A>
         // Input is neural net features
         Vector<double> input = agent.GetNeuralNetFeatures(state);
 
-        // If next state is terminal, value is 0. Otherwise, get the value from q values
-        double valueNextState = agent.IsTerminal(nextState) ? 0 : GetValueFromQValues(nextState);
+        double valueNextState = GetValueFromQValues(nextState);
 
         // Output used for gradient descent is current output, 
         // but with the node of the taken action changed to desired Q-value: reward + agent.Discount * next state value
-        Vector<double> output = MainNet.GetOutputValues(input);
+        // Should below be main net or target net
+        Vector<double> output = TargetNet.GetOutputValues(input);
         output[agent.GetNodeNumberFromAction(action)] = reward + agent.Discount * valueNextState;
         
         TargetNet.PerformGradientDescent(input, output);
 
         // After given number of iterations, replace target net with main net
-        if (iterationCounter++ == IterationsBeforeNetTransfer)
+        if (++iterationCounter == IterationsBeforeNetTransfer)
         {
             iterationCounter = 0;
-            MainNet = TargetNet;
-            TargetNet = MainNet.Clone();
+            MainNet = TargetNet.Clone();
         }
-
-        TotalRewards += reward;
     }
 
     public void SetActivator(int layer, IActivationFunction? activator)

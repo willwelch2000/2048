@@ -43,8 +43,6 @@ public class ApproximateQLearner<S, A>(IQLearnAgent<S, A> agent) : QLearner<S, A
         double correction = reward + agent.Discount * valueNextState - qValue;
         foreach (string featureName in features.Keys)
             Weights[featureName] = SafeGetWeight(featureName) + Alpha * correction * features[featureName];
-
-        TotalRewards += reward;
     }
 
     /// <summary>
