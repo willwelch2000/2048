@@ -38,7 +38,7 @@ public class NeuralNet
     /// <param name="numOutputNodes">Number of nodes for output layer</param>
     /// <param name="numMiddleLayers">Number of middle layers</param>
     /// <param name="activator"></param>
-    public NeuralNet(int numInputNodes, int numMiddleNodes, int numOutputNodes, int numMiddleLayers, IActivationFunction? primaryActivator)
+    public NeuralNet(int numInputNodes, int numMiddleNodes, int numOutputNodes, int numMiddleLayers, IActivationFunction primaryActivator)
     {
         // Initialize layer transforms
         layerTransforms = new LayerTransform[numMiddleLayers + 1];
@@ -46,27 +46,21 @@ public class NeuralNet
         // First transform
         layerTransforms[0] = new(
             Matrix<double>.Build.Random(numMiddleLayers > 0 ? numMiddleNodes : numOutputNodes, numInputNodes),
-            Vector<double>.Build.Random(numMiddleNodes))
-            {
-                Activator = primaryActivator
-            };
+            Vector<double>.Build.Random(numMiddleNodes),
+            primaryActivator);
 
         // Last transform
         layerTransforms[^1] = new(
             Matrix<double>.Build.Random(numOutputNodes, numMiddleLayers > 0 ? numMiddleNodes : numInputNodes),
-            Vector<double>.Build.Random(numOutputNodes))
-            {
-                Activator = primaryActivator
-            };
+            Vector<double>.Build.Random(numOutputNodes),
+            primaryActivator);
 
         // All other transforms
         for (int i = 1; i < numMiddleLayers; i++)
             layerTransforms[i] = new(
                 Matrix<double>.Build.Random(numMiddleNodes, numMiddleNodes),
-                Vector<double>.Build.Random(numMiddleNodes))
-                {
-                    Activator = primaryActivator
-                };
+                Vector<double>.Build.Random(numMiddleNodes),
+                primaryActivator);
 
         // Initialize nodes
         nodes = new Vector<double>[numMiddleLayers + 2];
@@ -89,7 +83,7 @@ public class NeuralNet
     /// <summary>
     /// Learning factor. How quickly weights change.
     /// </summary>
-    public double Alpha { get; set; } = 10;
+    public double Alpha { get; set; } = 0.01;
 
     /// <summary>
     /// Accessor for node values in the network
@@ -124,7 +118,7 @@ public class NeuralNet
     public void SetBias(int startLayer, int endNode, double value) =>
         layerTransforms[startLayer].Biases[endNode] = value;
 
-    public void SetActivator(int startLayer, IActivationFunction? activator) =>
+    public void SetActivator(int startLayer, IActivationFunction activator) =>
         layerTransforms[startLayer].Activator = activator;
 
     /// <summary>
@@ -141,10 +135,10 @@ public class NeuralNet
         int outputLength = output.Count;
 
         // Iterate through all layers
-        for (int layer = 0; layer < layerTransforms.Length; layer++)
+        for (int startLayer = 0; startLayer < layerTransforms.Length; startLayer++)
         {
-            Matrix<double> layerWeightMatrix = layerTransforms[layer].Weights.Clone();
-            Vector<double> layerBiasVector = layerTransforms[layer].Biases.Clone();
+            Matrix<double> layerWeightMatrix = layerTransforms[startLayer].Weights.Clone();
+            Vector<double> layerBiasVector = layerTransforms[startLayer].Biases.Clone();
 
             // Iterate through all end nodes of next layer
             for (int endNode = 0; endNode < layerWeightMatrix.RowCount; endNode++)
@@ -157,19 +151,19 @@ public class NeuralNet
                 {
                     double wSum = 0;
                     for (int outputNode = 0; outputNode < outputLength; outputNode++)
-                        wSum += (output[outputNode] - compare[outputNode]) * WeightDerivative(nodes.Length - 1, outputNode, layer, endNode, wStartNode);
+                        wSum += (output[outputNode] - compare[outputNode]) * WeightDerivative(nodes.Length - 1, outputNode, startLayer, endNode, wStartNode);
                     layerWeightMatrix[endNode, wStartNode] -= 2 / ((double) outputLength) * Alpha*wSum;
                 }
 
                 // Adjust all biases for the layer--see above for explanation
                 double bSum = 0;
                 for (int outputNode = 0; outputNode < outputLength; outputNode++)
-                    bSum += (output[outputNode] - compare[outputNode]) * BiasDerivative(nodes.Length - 1, outputNode, layer, endNode);
+                    bSum += (output[outputNode] - compare[outputNode]) * BiasDerivative(nodes.Length - 1, outputNode, startLayer, endNode);
                 layerBiasVector[endNode] -= 2 / ((double) outputLength) * Alpha*bSum;
             }
 
-            layerTransforms[layer].Weights = layerWeightMatrix;
-            layerTransforms[layer].Biases = layerBiasVector;
+            layerTransforms[startLayer].Weights = layerWeightMatrix;
+            layerTransforms[startLayer].Biases = layerBiasVector;
         }
     }
 
@@ -208,7 +202,7 @@ public class NeuralNet
                 // endnode = activator(w*startnode + ...), so d_endnode/dw = d_activator/d_activator_input * d_activator_input/dw = d_activator/d_activator_input * startnode
                 // Instead of actually giving the sigmoid input to the activator derivative function, we give the
                 // already-activated value, just because the calculation is simpler (sigmoid*(1-sigmoid)), and it's what we know: the node value
-                derivative = layerTransforms[wStartLayer].ActivationDerivative(nodes[layer][node]) * nodes[layer - 1][wStartNode];
+                derivative = layerTransforms[wStartLayer].Activator.ActivationDerivative(nodes[layer][node]) * nodes[layer - 1][wStartNode];
             else
                 // This weight has nothing to do with that node
                 derivative = 0;
@@ -252,7 +246,7 @@ public class NeuralNet
                 // endnode = activator(... + bias), so d_endnode/d_bias = d_activator/d_activator_input * d_activator_input/d_bias = d_activator/d_activator_input * 1
                 // Instead of actually giving the sigmoid input to the activator derivative function, we give the
                 // already-activated value, just because the calculation is simpler (sigmoid*(1-sigmoid)), and it's what we know: the node value
-                derivative = layerTransforms[bStartLayer].ActivationDerivative(nodes[layer][bEndNode]);
+                derivative = layerTransforms[bStartLayer].Activator.ActivationDerivative(nodes[layer][bEndNode]);
             else
                 // This bias has nothing to do with that node
                 derivative = 0;
@@ -293,7 +287,7 @@ public class NeuralNet
             // endnode = activator(w*startnode + ...), so d_endnode/d_startnode = d_activator/d_activator_input * d_activator_input/d_startnode = d_activator/d_activator_input * w
             // Instead of actually giving the sigmoid input to the activator derivative function, we give the
             // already-activated value, just because the calculation is simpler (sigmoid*(1-sigmoid)), and it's what we know: the node value
-            double derivative = layerTransforms[startLayer].ActivationDerivative(nodes[endLayer][endNode]) * layerTransforms[startLayer].Weights[endNode, startNode];
+            double derivative = layerTransforms[startLayer].Activator.ActivationDerivative(nodes[endLayer][endNode]) * layerTransforms[startLayer].Weights[endNode, startNode];
             nodeDerivativeCache[(endLayer, endNode, startLayer, startNode)] = derivative;
             return derivative;
         }

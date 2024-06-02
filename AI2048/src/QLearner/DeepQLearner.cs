@@ -22,6 +22,9 @@ public class DeepQLearner<S, A> : QLearner<S, A>
             TargetNet = new(agent.NeuralNetInputLayerSize, numMiddleNodes, agent.OutputSize, numMiddleLayers);
         else
             TargetNet = new(agent.NeuralNetInputLayerSize, numMiddleNodes, agent.OutputSize, numMiddleLayers, activator);
+        
+        // Default to no activation on output layer
+        TargetNet.LayerTransforms.Last().Activator = new NoActivation();
         MainNet = TargetNet.Clone();
     }
 
@@ -54,6 +57,9 @@ public class DeepQLearner<S, A> : QLearner<S, A>
     /// </summary>
     public NeuralNet TargetNet { get; private set; }
 
+    /// <summary>
+    /// Alpha is linked to the networks' alpha values
+    /// </summary>
     public override double Alpha
     {
         get => TargetNet.Alpha;
@@ -122,7 +128,7 @@ public class DeepQLearner<S, A> : QLearner<S, A>
         }
     }
 
-    public void SetActivator(int layer, IActivationFunction? activator)
+    public void SetActivator(int layer, IActivationFunction activator)
     {
         MainNet.SetActivator(layer, activator);
         TargetNet.SetActivator(layer, activator);

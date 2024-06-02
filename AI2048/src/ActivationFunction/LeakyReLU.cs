@@ -1,7 +1,7 @@
 namespace AI2048.Deep;
 
 /// <summary>
-/// Implements IActivationFunction as the leaky ReLU function
+/// Implements IActivationFunction as the leaky ReLU function: f(x) = x > 0 ? x : 0.1x
 /// </summary>
 public class LeakyReLU : IActivationFunction
 {

@@ -1,7 +1,7 @@
 namespace AI2048.Deep;
 
 /// <summary>
-/// Implements IActivationFunction as the sigmoid function: 1/(1+e^(-x))
+/// Implements IActivationFunction as the sigmoid function: f(x) = 1/(1+e^(-x))
 /// </summary>
 public class Sigmoid : IActivationFunction
 {

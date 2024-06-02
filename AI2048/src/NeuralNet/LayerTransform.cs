@@ -8,7 +8,7 @@ namespace AI2048.Deep;
 /// one layer into the next layer: weights, biases, and activation function
 /// output_layer = activation(weights * input_layer + biases)
 /// </summary>
-public class LayerTransform(Matrix<double> weights, Vector<double> biases)
+public class LayerTransform(Matrix<double> weights, Vector<double> biases, IActivationFunction activator)
 {
 
     /// <summary>
@@ -26,7 +26,7 @@ public class LayerTransform(Matrix<double> weights, Vector<double> biases)
     /// The activation function used for this transform
     /// If null, no activation is used
     /// </summary>
-    public IActivationFunction? Activator { get; set; }
+    public IActivationFunction Activator { get; set; } = activator;
 
     /// <summary>
     /// Map transformation of input to output
@@ -34,30 +34,8 @@ public class LayerTransform(Matrix<double> weights, Vector<double> biases)
     /// <param name="input"></param>
     /// <param name="output"></param>
     /// <returns></returns>
-    public void TransformLayer(Vector<double> input, Vector<double> output) 
-    {
-        if (Activator is null)
-            (Weights * input + Biases).Map(x => x, output);
-        else
-            (Weights * input + Biases).Map(Activator.Activate, output);
-    }
+    public void TransformLayer(Vector<double> input, Vector<double> output) =>
+        (Weights * input + Biases).Map(Activator.Activate, output);
 
-    /// <summary>
-    /// Take activator derivative of of given y value
-    /// If no activator, the derivative is 1, because f(x)=x
-    /// </summary>
-    /// <param name="y">y value of point to take derivative of</param>
-    /// <returns></returns>
-    public double ActivationDerivative(double y)
-    {
-        if (Activator is not null)
-            return Activator.ActivationDerivative(y);
-        return 1;
-    }
-
-    public LayerTransform Clone() =>
-        new(Weights, Biases)
-        {
-            Activator = Activator
-        };
+    public LayerTransform Clone() => new(Weights, Biases, Activator);
 }
