@@ -14,17 +14,20 @@ public class LayerTransform(Matrix<double> weights, Vector<double> biases, IActi
     /// <summary>
     /// Each entry in the matrix is the weight from a starting node to an ending node
     /// indexed like w[end node, start node]
+    /// Not settable by outside code, so that the size doesn't change
+    /// However, the values can be changed individually
     /// </summary>
     public Matrix<double> Weights { get; internal set; } = weights;
 
     /// <summary>
     /// Each entry in the vector is the bias for a given node in the layer
+    /// Not settable by outside code, so that the size doesn't change
+    /// However, the values can be changed individually
     /// </summary>
     public Vector<double> Biases { get; internal set; } = biases;
 
     /// <summary>
     /// The activation function used for this transform
-    /// If null, no activation is used
     /// </summary>
     public IActivationFunction Activator { get; set; } = activator;
 

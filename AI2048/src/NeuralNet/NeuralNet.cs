@@ -78,6 +78,10 @@ public class NeuralNet
 
     // // // properties
 
+    /// <summary>
+    /// Access to layer transforms used to propagate input to output
+    /// These are the actual layer transform objects, not copies, but the array itself (and its length) can't be changed from this
+    /// </summary>
     public IEnumerable<LayerTransform> LayerTransforms => layerTransforms.AsEnumerable();
 
     /// <summary>
@@ -87,6 +91,7 @@ public class NeuralNet
 
     /// <summary>
     /// Accessor for node values in the network
+    /// Not actual node objects--copies
     /// </summary>
     public IEnumerable<Vector<double>> Nodes => nodes.Select(n => n.Clone());
 
