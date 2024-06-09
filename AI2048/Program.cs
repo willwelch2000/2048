@@ -9,11 +9,9 @@ public class Program
 {
     public static void Main()
     {
-        // neuralnet_256x2x50_6_5_v1--2258.16
-        // neuralnet_256x2x50_6_6_v5--2611.04
-        RunWithoutTraining(Util.GetNeuralNetFromFile("neuralnet_256x2x50_6_6_v5.txt"));
+        // RunWithoutTraining(Util.GetNeuralNetFromFile("neuralnet_256x2x50_6_6_v5.txt"));
         // RunAndSaveToFile(Util.GetNeuralNetFromFile("neuralnet_256x2x50_6_5_v5.txt"), "neuralnet_256x2x50_6_6");
-        // RunAndSaveToFile(null, "test2.txt");
+        RunAndSaveToFile(null, "leakyrelu_256x2x50_6_9");
     }
 
     public static void NNTest() {
@@ -136,20 +134,20 @@ public class Program
     {
         if (startingNet is not null)
             startingNet.LayerTransforms.Last().Activator = new NoActivation();
-        IActivationFunction activationFunction = new Sigmoid();
+        IActivationFunction activationFunction = new LeakyReLU();
         Agent2048 agent = new();
         DeepQLearner<int[,], Direction> deepQLearner;
         if (startingNet is not null)
             deepQLearner = new(agent, startingNet);
         else
             deepQLearner = new(agent, 50, 2, activationFunction);
-        deepQLearner.Epsilon = .2;
+        deepQLearner.Epsilon = .8;
         deepQLearner.IterationsBeforeNetTransfer = 50;
         deepQLearner.Alpha = 0.01;
         _ = new CommandLineDisplay(agent.Game);
-        for (int v = 1; v < 6; v++)
+        for (int v = 1; v < 2; v++)
         {
-            deepQLearner.PerformQLearning(2);
+            deepQLearner.PerformQLearning(1);
             Console.WriteLine($"Test score: {deepQLearner.AverageScore}");
             Console.WriteLine($"Test rewards: {deepQLearner.AverageRewards}");
             deepQLearner.TargetNet.SaveTrainingState($"{filename}_v{v}.txt");

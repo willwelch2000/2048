@@ -5,7 +5,7 @@ namespace AI2048.Deep;
 /// </summary>
 public class LeakyReLU : IActivationFunction
 {
-    private const double subZeroSlope = 0.1;
+    private const double subZeroSlope = 0.01;
 
     public double Activate(double x) =>
         x > 0 ? x : subZeroSlope * x;
