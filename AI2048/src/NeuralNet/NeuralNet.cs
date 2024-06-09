@@ -239,8 +239,8 @@ public class NeuralNet
     public double BiasDerivative(int layer, int node, int bStartLayer, int bEndNode)
     {
         // Already cached
-        if (biasDerivativeCache.ContainsKey((layer, node, bStartLayer, bEndNode)))
-            return biasDerivativeCache[(layer, node, bStartLayer, bEndNode)];
+        if (biasDerivativeCache.TryGetValue((layer, node, bStartLayer, bEndNode), out double value))
+            return value;
 
         // Simple case for derivative
         if (layer == bStartLayer + 1)
@@ -283,8 +283,8 @@ public class NeuralNet
     public double NodeDerivative(int endLayer, int endNode, int startLayer, int startNode)
     {
         // Already cached
-        if (nodeDerivativeCache.ContainsKey((endLayer, endNode, startLayer, startNode)))
-            return nodeDerivativeCache[(endLayer, endNode, startLayer, startNode)];
+        if (nodeDerivativeCache.TryGetValue((endLayer, endNode, startLayer, startNode), out double value))
+            return value;
 
         // Simple case for derivative
         if (endLayer == startLayer + 1)

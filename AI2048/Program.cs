@@ -9,9 +9,11 @@ public class Program
 {
     public static void Main()
     {
-        // 64, 76
-        // 256, 323
-        RunAndSaveToFile(Util.GetNeuralNetFromFile("neuralnet_256x2x50_5_28_v2.txt"), "neuralnet_256x2x50_5_28_v3.txt");
+        // neuralnet_256x2x50_6_5_v1--2258.16
+        // neuralnet_256x2x50_6_6_v5--2611.04
+        RunWithoutTraining(Util.GetNeuralNetFromFile("neuralnet_256x2x50_6_6_v5.txt"));
+        // RunAndSaveToFile(Util.GetNeuralNetFromFile("neuralnet_256x2x50_6_5_v5.txt"), "neuralnet_256x2x50_6_6");
+        // RunAndSaveToFile(null, "test2.txt");
     }
 
     public static void NNTest() {
@@ -108,23 +110,23 @@ public class Program
 
         // Confirm equality
 
-        // Weights
-        int weights1Length = net1.Weights.Count();
-        int weights2Length = net2.Weights.Count();
-        for (int i = 0; i < weights1Length; i++)
-        {
-            Matrix<double> weights1 = net1.Weights.ElementAt(i);
-            Matrix<double> weights2 = net2.Weights.ElementAt(i);
-        }
+        // // Weights
+        // int weights1Length = net1.Weights.Count();
+        // int weights2Length = net2.Weights.Count();
+        // for (int i = 0; i < weights1Length; i++)
+        // {
+        //     Matrix<double> weights1 = net1.Weights.ElementAt(i);
+        //     Matrix<double> weights2 = net2.Weights.ElementAt(i);
+        // }
 
-        // Biases
-        int biases1Length = net1.Biases.Count();
-        int biases2Length = net2.Biases.Count();
-        for (int i = 0; i < biases1Length; i++)
-        {
-            Vector<double> biases1 = net1.Biases.ElementAt(i);
-            Vector<double> biases2 = net2.Biases.ElementAt(i);
-        }
+        // // Biases
+        // int biases1Length = net1.Biases.Count();
+        // int biases2Length = net2.Biases.Count();
+        // for (int i = 0; i < biases1Length; i++)
+        // {
+        //     Vector<double> biases1 = net1.Biases.ElementAt(i);
+        //     Vector<double> biases2 = net2.Biases.ElementAt(i);
+        // }
 
         // Delete file
         File.Delete("tempfileneuralnettest.txt");
@@ -132,20 +134,36 @@ public class Program
 
     public static void RunAndSaveToFile(NeuralNet? startingNet, string filename)
     {
+        if (startingNet is not null)
+            startingNet.LayerTransforms.Last().Activator = new NoActivation();
+        IActivationFunction activationFunction = new Sigmoid();
         Agent2048 agent = new();
         DeepQLearner<int[,], Direction> deepQLearner;
         if (startingNet is not null)
-        {
             deepQLearner = new(agent, startingNet);
-        }
         else
-            deepQLearner = new(agent, 50, 2);
-        deepQLearner.Epsilon = 0.3;
+            deepQLearner = new(agent, 50, 2, activationFunction);
+        deepQLearner.Epsilon = .2;
         deepQLearner.IterationsBeforeNetTransfer = 50;
+        deepQLearner.Alpha = 0.01;
         _ = new CommandLineDisplay(agent.Game);
-        deepQLearner.PerformQLearning(1);
+        for (int v = 1; v < 6; v++)
+        {
+            deepQLearner.PerformQLearning(2);
+            Console.WriteLine($"Test score: {deepQLearner.AverageScore}");
+            Console.WriteLine($"Test rewards: {deepQLearner.AverageRewards}");
+            deepQLearner.TargetNet.SaveTrainingState($"{filename}_v{v}.txt");
+        }
+    }
+
+    public static void RunWithoutTraining(NeuralNet startingNet)
+    {
+        startingNet.LayerTransforms.Last().Activator = new NoActivation();
+        Agent2048 agent = new();
+        DeepQLearner<int[,], Direction> deepQLearner = new(agent, startingNet);
+        _ = new CommandLineDisplay(agent.Game);
+        deepQLearner.PerformWithoutTraining(50);
         Console.WriteLine($"Test score: {deepQLearner.AverageScore}");
         Console.WriteLine($"Test rewards: {deepQLearner.AverageRewards}");
-        deepQLearner.TargetNet.SaveTrainingState(filename);
     }
 }
