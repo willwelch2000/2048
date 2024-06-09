@@ -74,7 +74,7 @@ public class Agent2048 : IQLearnAgent<int[,], Direction>
         for (int j = 0; j < 16; j++)
             for (int k = 0; k < 16; k++)
                 if (j != k)
-                    features[i++] = tiles[j] == tiles[k] && tiles[j] != 0 ? 1 : 0;
+                    features[i++] = tiles[j] == tiles[k] && tiles[j] != 0 ? 1 : -1;
         
         return features;
     }
