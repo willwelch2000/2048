@@ -68,7 +68,7 @@ public class Agent2048 : IQLearnAgent<int[,], Direction>
 
         // Basic features--all tile values
         foreach (int val in state)
-            features[i++] = (double) val / 10000;
+            features[i++] = (double) val / 100;
         
         // Maps of which tiles are the same
         for (int j = 0; j < 16; j++)
