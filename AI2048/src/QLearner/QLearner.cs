@@ -121,7 +121,7 @@ public abstract class QLearner<S, A>(IQLearnAgent<S, A> agent)
     /// </summary>
     /// <param name="state"></param>
     /// <returns>value</returns>
-    public double GetValueFromQValues(S state)
+    public virtual double GetValueFromQValues(S state)
     {
         IEnumerable<A> actions = agent.GetLegalActions(state);
         if (!actions.Any())

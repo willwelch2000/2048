@@ -73,6 +73,11 @@ public class DeepQLearner<S, A> : QLearner<S, A>
 
     // // // methods
 
+    /// <summary>
+    /// More efficient way to get action from max q value
+    /// </summary>
+    /// <param name="state"></param>
+    /// <returns>value</returns>
     public override A? GetActionFromQValues(S state)
     {
         // Get node numbers of legal actions
@@ -98,11 +103,29 @@ public class DeepQLearner<S, A> : QLearner<S, A>
         return agent.GetActionFromNodeNumber(maxNodes[randomIndex]);
     }
 
-
     public override double GetQValue(S state, A action)
     {
         Vector<double> output = MainNet.GetOutputValues(agent.GetNeuralNetFeatures(state));
         return output[agent.GetNodeNumberFromAction(action)];
+    }
+
+    /// <summary>
+    /// More efficient way to get max q value
+    /// </summary>
+    /// <param name="state"></param>
+    /// <returns>value</returns>
+    public override double GetValueFromQValues(S state)
+    {
+        // Get node numbers of legal actions
+        int[] legalActionNodeNumbers = agent.GetLegalActions(state).Select(agent.GetNodeNumberFromAction).ToArray();
+        if (legalActionNodeNumbers.Length == 0)
+            return 0;
+
+        // Get output from neural net
+        Vector<double> output = MainNet.GetOutputValues(agent.GetNeuralNetFeatures(state));
+
+        // Max value of legal actions
+        return legalActionNodeNumbers.Select(i => output[i]).Max();
     }
 
     public override void Update(S state, A action, S nextState, double reward)
