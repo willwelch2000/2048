@@ -105,8 +105,10 @@ public class NeuralNetTests
     {
         double tolerance = 0.01;
 
-        NeuralNet net = new(2, 2, 1, 0);
-        net.Alpha = 10;
+        NeuralNet net = new(2, 2, 1, 0)
+        {
+            Alpha = 10
+        };
 
         // Create comparison network
         NeuralNet compare = new(2, 2, 1, 0);
@@ -122,12 +124,16 @@ public class NeuralNetTests
             net.PerformGradientDescent(input, output);
         }
 
-        var weights = net.Weights.ToArray();
-        var compareWeights = compare.Weights.ToArray();
-        for (int i = 0; i < weights.Length; i++)
-            for (int j = 0; j < weights[i].RowCount; j++)
-                for (int k = 0; k < weights[i].ColumnCount; k++)
-                    Assert.IsTrue(weights[i][j, k] > compareWeights[i][j, k] - tolerance && weights[i][j, k] < compareWeights[i][j, k] + tolerance);
+        Assert.AreEqual(net.LayerTransforms.Count(), compare.LayerTransforms.Count());
+
+        for (int i = 0; i < net.LayerTransforms.Count(); i++)
+        {
+            var weights = net.LayerTransforms.ElementAt(i).Weights;
+            var compareWeights = compare.LayerTransforms.ElementAt(i).Weights;
+            for (int j = 0; j < weights.RowCount; j++)
+                for (int k = 0; k < weights.ColumnCount; k++)
+                    Assert.IsTrue(weights[j, k] > compareWeights[j, k] - tolerance && weights[j, k] < compareWeights[j, k] + tolerance);
+        }
     }
 
     [TestMethod]
@@ -140,24 +146,21 @@ public class NeuralNetTests
         // Confirm equality
 
         // Weights
-        int weights1Length = net1.Weights.Count();
-        int weights2Length = net2.Weights.Count();
-        Assert.AreEqual(weights1Length, weights2Length);
-        for (int i = 0; i < weights1Length; i++)
+        int layerTransforms1Length = net1.LayerTransforms.Count();
+        int layerTransforms2Length = net2.LayerTransforms.Count();
+        Assert.AreEqual(layerTransforms1Length, layerTransforms2Length);
+        for (int i = 0; i < layerTransforms1Length; i++)
         {
-            Matrix<double> weights1 = net1.Weights.ElementAt(i);
-            Matrix<double> weights2 = net2.Weights.ElementAt(i);
+            Matrix<double> weights1 = net1.LayerTransforms.ElementAt(i).Weights;
+            Matrix<double> weights2 = net2.LayerTransforms.ElementAt(i).Weights;
             Assert.AreEqual(weights1, weights2);
         }
 
         // Biases
-        int biases1Length = net1.Biases.Count();
-        int biases2Length = net2.Biases.Count();
-        Assert.AreEqual(biases1Length, biases2Length);
-        for (int i = 0; i < biases1Length; i++)
+        for (int i = 0; i < layerTransforms1Length; i++)
         {
-            Vector<double> biases1 = net1.Biases.ElementAt(i);
-            Vector<double> biases2 = net2.Biases.ElementAt(i);
+            Vector<double> biases1 = net1.LayerTransforms.ElementAt(i).Biases;
+            Vector<double> biases2 = net2.LayerTransforms.ElementAt(i).Biases;
             Assert.AreEqual(biases1, biases2);
         }
 

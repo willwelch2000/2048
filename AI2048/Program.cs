@@ -9,9 +9,10 @@ public class Program
 {
     public static void Main()
     {
-        // RunWithoutTraining(Util.GetNeuralNetFromFile("neuralnet_256x2x50_6_6_v5.txt"));
-        // RunAndSaveToFile(Util.GetNeuralNetFromFile("neuralnet_256x2x50_6_5_v5.txt"), "neuralnet_256x2x50_6_6");
-        RunAndSaveToFile(null, "leakyrelu_256x2x50_6_9");
+        // 1319.36, 2183.28, 934.08, 746.08, 622.88
+        RunWithoutTraining(Util.GetNeuralNetFromFile("reluslope_256x2x50_6_11_v3.txt"));
+        // RunAndSaveToFile(Util.GetNeuralNetFromFile("reluslope_256x2x50_6_10_v1.txt"), "reluslope_256x2x50_6_11");
+        // RunAndSaveToFile(null, "reluslope_256x2x50_6_9");
     }
 
     public static void NNTest() {
@@ -133,19 +134,23 @@ public class Program
     public static void RunAndSaveToFile(NeuralNet? startingNet, string filename)
     {
         if (startingNet is not null)
+        {
+            foreach (var layerTransform in startingNet.LayerTransforms)
+                layerTransform.Activator = new ReLUWithSlopes(0.1, 0.001);
             startingNet.LayerTransforms.Last().Activator = new NoActivation();
-        IActivationFunction activationFunction = new LeakyReLU();
+        }
+        IActivationFunction activationFunction = new ReLUWithSlopes(0.1, 0.001);
         Agent2048 agent = new();
         DeepQLearner<int[,], Direction> deepQLearner;
         if (startingNet is not null)
             deepQLearner = new(agent, startingNet);
         else
             deepQLearner = new(agent, 50, 2, activationFunction);
-        deepQLearner.Epsilon = .8;
+        deepQLearner.Epsilon = .3;
         deepQLearner.IterationsBeforeNetTransfer = 50;
         deepQLearner.Alpha = 0.01;
         _ = new CommandLineDisplay(agent.Game);
-        for (int v = 1; v < 2; v++)
+        for (int v = 1; v < 4; v++)
         {
             deepQLearner.PerformQLearning(1);
             Console.WriteLine($"Test score: {deepQLearner.AverageScore}");
@@ -156,6 +161,8 @@ public class Program
 
     public static void RunWithoutTraining(NeuralNet startingNet)
     {
+        foreach (var layerTransform in startingNet.LayerTransforms)
+            layerTransform.Activator = new ReLUWithSlopes(0.1, 0.001);
         startingNet.LayerTransforms.Last().Activator = new NoActivation();
         Agent2048 agent = new();
         DeepQLearner<int[,], Direction> deepQLearner = new(agent, startingNet);
