@@ -128,7 +128,10 @@ public class NeuralNet
 
     /// <summary>
     /// Given a single set of input value and its desired output, adjust the weights accordingly
-    /// TODO: optimize
+    /// TODO: optimize by
+    /// 1. Check if output = compare before finding derivative--may not be necessary
+    /// 2. Numeric derivatives--move thing by dx and check output
+    /// 3. Some sort of matrix-based backpropagation
     /// </summary>
     /// <param name="input">input layer</param>
     /// <param name="compare">desired output</param>
@@ -138,6 +141,14 @@ public class NeuralNet
 
         Vector<double> output = GetOutputValues(input);
         int outputLength = output.Count;
+
+        // Figure out which nodes are incorrect enough to change--only consider these for adjustments
+        Vector<double> outputDifference = output - compare;
+        const double pctDiffThreshold = 0.01;
+        List<int> incorrectOutputNodes = [];
+        for (int i = 0; i < outputLength; i++)
+            if (outputDifference[i] != 0 && compare[i] != 0 && Math.Abs(outputDifference[i]/compare[i]) > pctDiffThreshold)
+                incorrectOutputNodes.Add(i);
 
         // Iterate through all layers
         for (int startLayer = 0; startLayer < layerTransforms.Length; startLayer++)
@@ -155,15 +166,15 @@ public class NeuralNet
                 for (int wStartNode = 0; wStartNode < layerWeightMatrix.ColumnCount; wStartNode++)
                 {
                     double wSum = 0;
-                    for (int outputNode = 0; outputNode < outputLength; outputNode++)
-                        wSum += (output[outputNode] - compare[outputNode]) * WeightDerivative(nodes.Length - 1, outputNode, startLayer, endNode, wStartNode);
+                    foreach (int outputNode in incorrectOutputNodes)
+                        wSum += outputDifference[outputNode] * WeightDerivative(nodes.Length - 1, outputNode, startLayer, endNode, wStartNode);
                     layerWeightMatrix[endNode, wStartNode] -= 2 / ((double) outputLength) * Alpha*wSum;
                 }
 
                 // Adjust all biases for the layer--see above for explanation
                 double bSum = 0;
-                for (int outputNode = 0; outputNode < outputLength; outputNode++)
-                    bSum += (output[outputNode] - compare[outputNode]) * BiasDerivative(nodes.Length - 1, outputNode, startLayer, endNode);
+                foreach (int outputNode in incorrectOutputNodes)
+                    bSum += outputDifference[outputNode] * BiasDerivative(nodes.Length - 1, outputNode, startLayer, endNode);
                 layerBiasVector[endNode] -= 2 / ((double) outputLength) * Alpha*bSum;
             }
 
