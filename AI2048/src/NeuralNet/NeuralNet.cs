@@ -24,11 +24,21 @@ public class NeuralNet
     private Dictionary<(int layer, int node, int bStartLayer, int bEndNode), double> biasDerivativeCache;
     private Dictionary<(int endLayer, int endNode, int startLayer, int startNode), double> nodeDerivativeCache;
 
+    /// </summary>
+    /// Cache for loss derivatives used for accessor functions
+    /// </summary>
+    private (Matrix<double>[] weights, Vector<double>[] biases)? lossDerivativeCache = null;
 
     // // // constructors
 
+    /// <summary>
+    /// Constructor that uses Sigmoid activator by default
+    /// </summary>
+    /// <param name="numInputNodes">Number of nodes for input layer</param>
+    /// <param name="numMiddleNodes">Number of nodes for middle layers</param>
+    /// <param name="numOutputNodes">Number of nodes for output layer</param>
+    /// <param name="numMiddleLayers">Number of middle layers</param>
     public NeuralNet(int numInputNodes, int numMiddleNodes, int numOutputNodes, int numMiddleLayers) : this(numInputNodes, numMiddleNodes, numOutputNodes, numMiddleLayers, new Sigmoid()) {}
-
 
     /// <summary>
     /// Main constructor
@@ -38,28 +48,28 @@ public class NeuralNet
     /// <param name="numOutputNodes">Number of nodes for output layer</param>
     /// <param name="numMiddleLayers">Number of middle layers</param>
     /// <param name="activator"></param>
-    public NeuralNet(int numInputNodes, int numMiddleNodes, int numOutputNodes, int numMiddleLayers, IActivationFunction primaryActivator)
+    public NeuralNet(int numInputNodes, int numMiddleNodes, int numOutputNodes, int numMiddleLayers, IActivationFunction primaryActivator, int? randomSeed = null)
     {
         // Initialize layer transforms
         layerTransforms = new LayerTransform[numMiddleLayers + 1];
 
         // First transform
         layerTransforms[0] = new(
-            Matrix<double>.Build.Random(numMiddleLayers > 0 ? numMiddleNodes : numOutputNodes, numInputNodes),
-            Vector<double>.Build.Random(numMiddleNodes),
+            randomSeed is null ? Matrix<double>.Build.Random(numMiddleLayers > 0 ? numMiddleNodes : numOutputNodes, numInputNodes) : Matrix<double>.Build.Random(numMiddleLayers > 0 ? numMiddleNodes : numOutputNodes, numInputNodes, randomSeed ?? 0),
+            randomSeed is null ? Vector<double>.Build.Random(numMiddleNodes) : Vector<double>.Build.Random(numMiddleNodes, randomSeed ?? 0),
             primaryActivator);
 
         // Last transform
         layerTransforms[^1] = new(
-            Matrix<double>.Build.Random(numOutputNodes, numMiddleLayers > 0 ? numMiddleNodes : numInputNodes),
-            Vector<double>.Build.Random(numOutputNodes),
+            randomSeed is null ? Matrix<double>.Build.Random(numOutputNodes, numMiddleLayers > 0 ? numMiddleNodes : numInputNodes) : Matrix<double>.Build.Random(numOutputNodes, numMiddleLayers > 0 ? numMiddleNodes : numInputNodes, randomSeed ?? 0),
+            randomSeed is null ? Vector<double>.Build.Random(numOutputNodes) : Vector<double>.Build.Random(numOutputNodes, randomSeed ?? 0),
             primaryActivator);
 
         // All other transforms
         for (int i = 1; i < numMiddleLayers; i++)
             layerTransforms[i] = new(
-                Matrix<double>.Build.Random(numMiddleNodes, numMiddleNodes),
-                Vector<double>.Build.Random(numMiddleNodes),
+                randomSeed is null ? Matrix<double>.Build.Random(numMiddleNodes, numMiddleNodes) : Matrix<double>.Build.Random(numMiddleNodes, numMiddleNodes, randomSeed ?? 0),
+                randomSeed is null ? Vector<double>.Build.Random(numMiddleNodes) : Vector<double>.Build.Random(numMiddleNodes, randomSeed ?? 0),
                 primaryActivator);
 
         // Initialize nodes
@@ -69,7 +79,7 @@ public class NeuralNet
         for (int i = 1; i < numMiddleLayers + 1; i++)
             nodes[i] = Vector<double>.Build.Dense(numMiddleNodes);
 
-        // Initialize cache dictionaries
+        // Initialize cache dictionaries and node derivative array
         weightDerivativeCache = [];
         biasDerivativeCache = [];
         nodeDerivativeCache = [];
@@ -110,6 +120,7 @@ public class NeuralNet
     /// <returns></returns>
     public Vector<double> GetOutputValues(Vector<double> input)
     {
+        ResetDerivativeCaches();
         nodes[0] = input.Clone();
         for (int i = 0; i < layerTransforms.Length; i++)
             layerTransforms[i].TransformLayer(nodes[i], nodes[i + 1]);
@@ -117,69 +128,56 @@ public class NeuralNet
         return nodes.Last().Clone();
     }
 
-    public void SetWeight(int startLayer, int startNode, int endNode, double value) =>
+    /// <summary>
+    /// Set a specific weight
+    /// </summary>
+    /// <param name="startLayer"></param>
+    /// <param name="startNode"></param>
+    /// <param name="endNode"></param>
+    /// <param name="value"></param>
+    public void SetWeight(int startLayer, int startNode, int endNode, double value)
+    {
         layerTransforms[startLayer].Weights[endNode, startNode] = value;
+        ResetDerivativeCaches();
+    }
 
-    public void SetBias(int startLayer, int endNode, double value) =>
+    /// <summary>
+    /// Set a specific bias
+    /// </summary>
+    /// <param name="startLayer"></param>
+    /// <param name="endNode"></param>
+    /// <param name="value"></param>
+    public void SetBias(int startLayer, int endNode, double value)
+    {
         layerTransforms[startLayer].Biases[endNode] = value;
+        ResetDerivativeCaches();
+    }
 
-    public void SetActivator(int startLayer, IActivationFunction activator) =>
+    /// <summary>
+    /// Set the activator for a layer transform
+    /// </summary>
+    /// <param name="startLayer"></param>
+    /// <param name="activator"></param>
+    public void SetActivator(int startLayer, IActivationFunction activator)
+    {
         layerTransforms[startLayer].Activator = activator;
+        ResetDerivativeCaches();
+    }
 
     /// <summary>
     /// Given a single set of input value and its desired output, adjust the weights accordingly
-    /// TODO: optimize by
-    /// 1. Check if output = compare before finding derivative--may not be necessary
-    /// 2. Numeric derivatives--move thing by dx and check output
-    /// 3. Some sort of matrix-based backpropagation
+    /// TODO test
     /// </summary>
     /// <param name="input">input layer</param>
     /// <param name="compare">desired output</param>
     public void PerformGradientDescent(Vector<double> input, Vector<double> compare)
     {
-        ResetDerivativeCaches();
+        (Matrix<double>[] weightDerivatives, Vector<double>[] biasDerivatives) = CalculateLossDerivatives(input, compare);
 
-        Vector<double> output = GetOutputValues(input);
-        int outputLength = output.Count;
-
-        // Figure out which nodes are incorrect enough to change--only consider these for adjustments
-        Vector<double> outputDifference = output - compare;
-        const double pctDiffThreshold = 0.01;
-        List<int> incorrectOutputNodes = [];
-        for (int i = 0; i < outputLength; i++)
-            if (outputDifference[i] != 0 && compare[i] != 0 && Math.Abs(outputDifference[i]/compare[i]) > pctDiffThreshold)
-                incorrectOutputNodes.Add(i);
-
-        // Iterate through all layers
-        for (int startLayer = 0; startLayer < layerTransforms.Length; startLayer++)
+        for (int i = 0; i < layerTransforms.Length; i++)
         {
-            Matrix<double> layerWeightMatrix = layerTransforms[startLayer].Weights.Clone();
-            Vector<double> layerBiasVector = layerTransforms[startLayer].Biases.Clone();
-
-            // Iterate through all end nodes of next layer
-            for (int endNode = 0; endNode < layerWeightMatrix.RowCount; endNode++)
-            {
-                // Adjust all weights for the layer: w = w - Alpha*d/dw(Loss)
-                // Loss = SUM((output - compare)^2)/outputlength
-                // d/dw(Loss) = SUM(2(output - compare)*d/dw(output))/outputlength
-                // Weight adjustment simplifies to: w = w - 2/outputlength * Alpha * SUM((output - compare)*d/dw(output))
-                for (int wStartNode = 0; wStartNode < layerWeightMatrix.ColumnCount; wStartNode++)
-                {
-                    double wSum = 0;
-                    foreach (int outputNode in incorrectOutputNodes)
-                        wSum += outputDifference[outputNode] * WeightDerivative(nodes.Length - 1, outputNode, startLayer, endNode, wStartNode);
-                    layerWeightMatrix[endNode, wStartNode] -= 2 / ((double) outputLength) * Alpha*wSum;
-                }
-
-                // Adjust all biases for the layer--see above for explanation
-                double bSum = 0;
-                foreach (int outputNode in incorrectOutputNodes)
-                    bSum += outputDifference[outputNode] * BiasDerivative(nodes.Length - 1, outputNode, startLayer, endNode);
-                layerBiasVector[endNode] -= 2 / ((double) outputLength) * Alpha*bSum;
-            }
-
-            layerTransforms[startLayer].Weights = layerWeightMatrix;
-            layerTransforms[startLayer].Biases = layerBiasVector;
+            weightDerivatives[i] -= Alpha * weightDerivatives[i];
+            biasDerivatives[i] -= Alpha * biasDerivatives[i];
         }
     }
 
@@ -204,7 +202,7 @@ public class NeuralNet
     /// <param name="wEndNode">the end node of the weight under examination</param>
     /// <param name="wStartNode">the start node of the weight under examination</param>
     /// <returns></returns>
-    public double WeightDerivative(int layer, int node, int wStartLayer, int wEndNode, int wStartNode)
+    public double GetNodeToWeightDerivative(int layer, int node, int wStartLayer, int wEndNode, int wStartNode)
     {
         // Already cached
         if (weightDerivativeCache.TryGetValue((layer, node, wStartLayer, wEndNode, wStartNode), out double value))
@@ -230,7 +228,8 @@ public class NeuralNet
         if (wStartLayer + 1 < layer)
         {
             int prevLayerLength = nodes[layer - 1].Count;
-            double derivative = Enumerable.Range(0, prevLayerLength).Select(i => NodeDerivative(layer, node, layer - 1, i) * WeightDerivative(layer - 1, i, wStartLayer, wEndNode, wStartNode)).Sum();
+            double derivative = Enumerable.Range(0, prevLayerLength).Select(i => GetNodeToNodeDerivative(layer, node, layer - 1, i) * GetNodeToWeightDerivative(layer - 1, i, wStartLayer, wEndNode, wStartNode)).Sum();
+            // double derivative = Enumerable.Range(0, prevLayerLength).Select(i => nodeDerivatives[layer][node, i] * WeightDerivative(layer - 1, i, wStartLayer, wEndNode, wStartNode)).Sum();
             weightDerivativeCache[(layer, node, wStartLayer, wEndNode, wStartNode)] = derivative;
             return derivative;
         }
@@ -247,7 +246,7 @@ public class NeuralNet
     /// <param name="bStartLayer">the starting layer (layer before the one that it's used to calculate) of the bias that is the denominator</param>
     /// <param name="bEndNode">the node that this bias is involved in calculating</param>
     /// <returns></returns>
-    public double BiasDerivative(int layer, int node, int bStartLayer, int bEndNode)
+    public double GetNodeToBiasDerivative(int layer, int node, int bStartLayer, int bEndNode)
     {
         // Already cached
         if (biasDerivativeCache.TryGetValue((layer, node, bStartLayer, bEndNode), out double value))
@@ -274,7 +273,8 @@ public class NeuralNet
         if (bStartLayer + 1 < layer)
         {
             int prevLayerLength = nodes[layer - 1].Count;
-            double derivative = Enumerable.Range(0, prevLayerLength).Select(i => NodeDerivative(layer, node, layer - 1, i) * BiasDerivative(layer - 1, i, bStartLayer, bEndNode)).Sum();
+            double derivative = Enumerable.Range(0, prevLayerLength).Select(i => GetNodeToNodeDerivative(layer, node, layer - 1, i) * GetNodeToBiasDerivative(layer - 1, i, bStartLayer, bEndNode)).Sum();
+            // double derivative = Enumerable.Range(0, prevLayerLength).Select(i => nodeDerivatives[layer][node, i] * BiasDerivative(layer - 1, i, bStartLayer, bEndNode)).Sum();
             biasDerivativeCache[(layer, node, bStartLayer, bEndNode)] = derivative;
             return derivative;
         }
@@ -291,7 +291,7 @@ public class NeuralNet
     /// <param name="startLayer">layer of the denominator node</param>
     /// <param name="startNode">which node in the layer for the denominator node</param>
     /// <returns></returns>
-    public double NodeDerivative(int endLayer, int endNode, int startLayer, int startNode)
+    public double GetNodeToNodeDerivative(int endLayer, int endNode, int startLayer, int startNode)
     {
         // Already cached
         if (nodeDerivativeCache.TryGetValue((endLayer, endNode, startLayer, startNode), out double value))
@@ -312,7 +312,7 @@ public class NeuralNet
         if (startLayer + 1 < endLayer)
         {
             int prevLayerLength = nodes[endLayer - 1].Count;
-            double derivative = Enumerable.Range(0, prevLayerLength).Select(i => NodeDerivative(endLayer, endNode, endLayer - 1, i) * NodeDerivative(endLayer - 1, i, startLayer, startNode)).Sum();
+            double derivative = Enumerable.Range(0, prevLayerLength).Select(i => GetNodeToNodeDerivative(endLayer, endNode, endLayer - 1, i) * GetNodeToNodeDerivative(endLayer - 1, i, startLayer, startNode)).Sum();
             nodeDerivativeCache[(endLayer, endNode, startLayer, startNode)] = derivative;
             return derivative;
         }
@@ -320,11 +320,84 @@ public class NeuralNet
         return 0;
     }
 
+    /// <summary>
+    /// Get derivative of loss function with respect to a weight
+    /// To work properly, the CalculateLossDerivatives() function must be called first
+    /// </summary>
+    /// <param name="startLayer">layer of layer transformed by this weight (e.g. 1 means the weights going from layer 1 to 2)</param>
+    /// <param name="endNode">which node in the target (end) layer for the weight</param>
+    /// <param name="startNode">which node in the start layer for the weight</param>
+    /// <returns></returns>
+    public double? GetLossToWeightDerivative(int startLayer, int endNode, int startNode)
+    {
+        return lossDerivativeCache?.weights[startLayer][endNode, startNode] ?? null;
+    }
+    
+    /// <summary>
+    /// Get derivative of loss function with respect to a bias
+    /// To work properly, the CalculateLossDerivatives() function must be called first
+    /// </summary>
+    /// <param name="startLayer">layer of layer transformed by this weight (e.g. 1 means the biases going from layer 1 to 2)</param>
+    /// <param name="endNode">which node in the target (end) layer for the bias</param>
+    /// <returns></returns>
+    public double? GetLossToBiasDerivative(int startLayer, int endNode)
+    {
+        return lossDerivativeCache?.biases[startLayer][endNode] ?? null;
+    }
+
+    /// <summary>
+    /// Uses matrix multiplication to efficiently calculate derivatives
+    /// </summary>
+    /// <param name="output">current output</param>
+    /// <param name="compare">desired output</param>
+    public (Matrix<double>[] weightDerivatives, Vector<double>[] biasDerivatives) CalculateLossDerivatives(Vector<double> input, Vector<double> compare)
+    {
+        // Store derivatives of weights and biases--both of these are the same shape of the weights/biases so that they can be added together
+        Matrix<double>[] weightDerivatives = new Matrix<double>[nodes.Length - 1];
+        Vector<double>[] biasDerivatives = new Vector<double>[nodes.Length - 1];
+
+        Vector<double> output = GetOutputValues(input);
+
+        // Calculate d_Loss/d_output as a row matrix, where v[0, 0] gives the derivative of the loss with respect to the first output node
+        // We start with the last layer, this will get transformed as we go on
+        Matrix<double> nodeDerivativeMatrix = (2 * (output - compare)).ToRowMatrix();
+
+        // Work backwards, starting at 2nd-to-last layer since last layer is already done
+        // In each loop, calculate the derivative of the (layer)th weights and then (layer)th nodes
+        for (int layer = nodes.Length - 2; layer >= 0; layer--)
+        {
+            LayerTransform layerTransform = layerTransforms[layer];
+            Vector<double> startNodes = nodes[layer];
+            Vector<double> endNodes = nodes[layer + 1];
+            int endLayerLength = endNodes.Count;
+
+            // Calculate derivative of the current layer pre-activation (the derivative of the sums that get activated) as a row matrix
+            Matrix<double> activationDerivativeMatrix = Matrix<double>.Build.Diagonal(endLayerLength, endLayerLength, i => layerTransform.Activator.ActivationDerivative(endNodes[i]));
+            Matrix<double> preActivationNodeDerivativeMatrix = nodeDerivativeMatrix * activationDerivativeMatrix;
+
+            // Get weight derivatives--this is the d_Loss/dw for each entry in the weight matrix--can be added to weight matrix
+            // This is calculated by taking the derivative of the unactivated next layer (transposed to be a column) times this layer of nodes (as row)
+            weightDerivatives[layer] = preActivationNodeDerivativeMatrix.TransposeThisAndMultiply(nodes[layer].ToRowMatrix());
+            
+            // Bias derivative matrix is just the same as the preactivation derivatives, but as a vector
+            biasDerivatives[layer] = preActivationNodeDerivativeMatrix.Row(0);
+
+            // Matrix representing Jacobian of activation function (m[i,j] = derivative of ith output with respect to jth input, dyi/dxj)
+            // For a function like the activation functions, which just perform a function on each input by itself, it's a diagonal matrix
+            nodeDerivativeMatrix = preActivationNodeDerivativeMatrix * layerTransform.Weights;
+        }
+
+        lossDerivativeCache = (weightDerivatives, biasDerivatives);
+
+        return (weightDerivatives, biasDerivatives);
+    }
+
     public void ResetDerivativeCaches()
     {
         weightDerivativeCache = [];
         biasDerivativeCache = [];
         nodeDerivativeCache = [];
+        lossDerivativeCache = null;
     }
 
     public NeuralNet Clone()

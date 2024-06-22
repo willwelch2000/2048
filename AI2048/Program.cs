@@ -10,8 +10,8 @@ public class Program
     public static void Main()
     {
         // 1319.36, 2183.28, 934.08, 746.08, 622.88
-        RunWithoutTraining(Util.GetNeuralNetFromFile("reluslope_256x2x50_6_11_v3.txt"));
-        // RunAndSaveToFile(Util.GetNeuralNetFromFile("reluslope_256x2x50_6_10_v1.txt"), "reluslope_256x2x50_6_11");
+        // RunWithoutTraining(Util.GetNeuralNetFromFile("reluslope_256x2x50_6_11_v3.txt"));
+        RunAndSaveToFile(Util.GetNeuralNetFromFile("reluslope_256x2x50_6_11_v3.txt"), "reluslope_256x2x50_6_13");
         // RunAndSaveToFile(null, "reluslope_256x2x50_6_9");
     }
 

@@ -19,10 +19,10 @@ public class Agent2048Tests
         Agent2048 agent = new();
         Vector<double> features = agent.GetNeuralNetFeatures(state);
 
-        Assert.AreEqual(features[0], (double) 2 / 10000);
-        Assert.AreEqual(features[5], (double) 16 / 10000);
-        // Assert.AreEqual(features[16 + 0], 0);
-        // Assert.AreEqual(features[16 + 2], 0);
-        // Assert.AreEqual(features[16 + 3], 1);
+        Assert.AreEqual(features[0], (double) 2 / 100);
+        Assert.AreEqual(features[5], (double) 16 / 100);
+        Assert.AreEqual(features[16 + 0], -1);
+        Assert.AreEqual(features[16 + 2], -1);
+        Assert.AreEqual(features[16 + 3], 1);
     }
 }

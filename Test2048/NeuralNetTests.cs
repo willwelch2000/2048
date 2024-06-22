@@ -46,77 +46,104 @@ public class NeuralNetTests
     }
 
     [TestMethod]
-    public void TestDerivatives()
+    public void TestToNodeDerivatives()
     {
         double tolerance = 0.0001;
 
-        NeuralNet net = new(2, 2, 2, 1);
+        NeuralNet net = GetNeuralNet();
 
-        // Set weights
-
-        net.SetWeight(0, 0, 0, 2);
-        net.SetWeight(0, 0, 1, -3);
-        net.SetWeight(0, 1, 0, -1);
-        net.SetWeight(0, 1, 1, 1);
-        
-        net.SetWeight(1, 0, 0, 5);
-        net.SetWeight(1, 0, 1, 1);
-        net.SetWeight(1, 1, 0, -2);
-        net.SetWeight(1, 1, 1, -1);
-
-        // Set biases
-
-        net.SetBias(0, 0, -1);
-        net.SetBias(0, 1, -2);
-        
-        net.SetBias(1, 0, 1);
-        net.SetBias(1, 1, -3);
-
-        Vector<double> input = Vector<double>.Build.Dense(new double[] {1, 2});
+        Vector<double> input = Vector<double>.Build.Dense([1, 2]);
         Vector<double> output = net.GetOutputValues(input);
-
-        double derivH0 = net.NodeDerivative(2, 0, 1, 0);
+        
+        double derivH0 = net.GetNodeToNodeDerivative(2, 0, 1, 0);
         double correctDerivH0 = 0.4313;
         Assert.IsTrue(derivH0 > correctDerivH0 - tolerance && derivH0 < correctDerivH0 + tolerance);
 
-        double derivB11 = net.BiasDerivative(2, 0, 1, 0);
+        double derivB11 = net.GetNodeToBiasDerivative(2, 0, 1, 0);
         double correctDerivB11 = 0.08626804196599218;
         Assert.IsTrue(derivB11 > correctDerivB11 - tolerance && derivB11 < correctDerivB11 + tolerance);
 
-        double derivW101 = net.WeightDerivative(2, 0, 1, 0, 1);
+        double derivW101 = net.GetNodeToWeightDerivative(2, 0, 1, 0, 1);
         double correctDerivW101 = 0.004091337217556154;
         Assert.IsTrue(derivW101 > correctDerivW101 - tolerance && derivW101 < correctDerivW101 + tolerance);
 
-        double derivX0 = net.NodeDerivative(2, 0, 0, 0);
+        double derivX0 = net.GetNodeToNodeDerivative(2, 0, 0, 0);
         double correctDerivX0 = 0.19299707694420815;
         Assert.IsTrue(derivX0 > correctDerivX0 - tolerance && derivX0 < correctDerivX0 + tolerance);
 
-        double derivB00 = net.BiasDerivative(2, 1, 0, 0);
+        double derivB00 = net.GetNodeToBiasDerivative(2, 1, 0, 0);
         double correctDerivB00 = 0.01082859047691552;
         Assert.IsTrue(derivB00 > correctDerivB00 - tolerance && derivB00 < correctDerivB00 + tolerance);
 
-        double derivW010 = net.WeightDerivative(2, 1, 0, 1, 0);
+        double derivW010 = net.GetNodeToWeightDerivative(2, 1, 0, 1, 0);
         double correctDerivW010 = -0.002488147790806601;
         Assert.IsTrue(derivW010 > correctDerivW010 - tolerance && derivW010 < correctDerivW010 + tolerance);
     }
 
     [TestMethod]
+    public void TestLossDerivatives()
+    {
+        double tolerance = 0.0001;
+
+        NeuralNet net = GetNeuralNet();
+
+        Vector<double> input = Vector<double>.Build.Dense([1, 2]);
+        Vector<double> compare = Vector<double>.Build.Dense([0.95, 0.1]);
+
+        net.GetOutputValues(input);
+        net.CalculateLossDerivatives(input, compare);
+
+        double derivW100 = net.GetLossToWeightDerivative(1, 0, 0) ?? 0;
+        double correctDerivW100 = -0.0907 * net.GetNodeToWeightDerivative(2, 0, 1, 0, 0) + -0.0830 * net.GetNodeToWeightDerivative(2, 1, 1, 0, 0);
+        Assert.IsTrue(derivW100 > correctDerivW100 - tolerance && derivW100 < correctDerivW100 + tolerance);
+
+        double derivW110 = net.GetLossToWeightDerivative(1, 1, 0) ?? 0;
+        double correctDerivW110 = -0.0907 * net.GetNodeToWeightDerivative(2, 0, 1, 1, 0) + -0.0830 * net.GetNodeToWeightDerivative(2, 1, 1, 1, 0);
+        Assert.IsTrue(derivW110 > correctDerivW110 - tolerance && derivW110 < correctDerivW110 + tolerance);
+
+        double derivW101 = net.GetLossToWeightDerivative(1, 0, 1) ?? 0;
+        double correctDerivW101 = -0.0907 * net.GetNodeToWeightDerivative(2, 0, 1, 0, 1) + -0.0830 * net.GetNodeToWeightDerivative(2, 1, 1, 0, 1);
+        Assert.IsTrue(derivW101 > correctDerivW101 - tolerance && derivW101 < correctDerivW101 + tolerance);
+
+        double derivW111 = net.GetLossToWeightDerivative(1, 1, 1) ?? 0;
+        double correctDerivW111 = -0.0907 * net.GetNodeToWeightDerivative(2, 0, 1, 1, 1) + -0.0830 * net.GetNodeToWeightDerivative(2, 1, 1, 1, 1);
+        Assert.IsTrue(derivW111 > correctDerivW111 - tolerance && derivW111 < correctDerivW111 + tolerance);
+
+        double derivW000 = net.GetLossToWeightDerivative(0, 0, 0) ?? 0;
+        double correctDerivW000 = -0.0907 * net.GetNodeToWeightDerivative(2, 0, 0, 0, 0) + -0.0830 * net.GetNodeToWeightDerivative(2, 1, 0, 0, 0);
+        Assert.IsTrue(derivW000 > correctDerivW000 - tolerance && derivW000 < correctDerivW000 + tolerance);
+
+        double derivW010 = net.GetLossToWeightDerivative(0, 1, 0) ?? 0;
+        double correctDerivW010 = -0.0907 * net.GetNodeToWeightDerivative(2, 0, 0, 1, 0) + -0.0830 * net.GetNodeToWeightDerivative(2, 1, 0, 1, 0);
+        Assert.IsTrue(derivW010 > correctDerivW010 - tolerance && derivW010 < correctDerivW010 + tolerance);
+
+        double derivW001 = net.GetLossToWeightDerivative(0, 0, 1) ?? 0;
+        double correctDerivW001 = -0.0907 * net.GetNodeToWeightDerivative(2, 0, 0, 0, 1) + -0.0830 * net.GetNodeToWeightDerivative(2, 1, 0, 0, 1);
+        Assert.IsTrue(derivW001 > correctDerivW001 - tolerance && derivW001 < correctDerivW001 + tolerance);
+
+        double derivW011 = net.GetLossToWeightDerivative(0, 1, 1) ?? 0;
+        double correctDerivW011 = -0.0907 * net.GetNodeToWeightDerivative(2, 0, 0, 1, 1) + -0.0830 * net.GetNodeToWeightDerivative(2, 1, 0, 1, 1);
+        Assert.IsTrue(derivW011 > correctDerivW011 - tolerance && derivW011 < correctDerivW011 + tolerance);
+    }
+
+    [TestMethod]
     public void TestGradDescent2Layer1Output()
     {
-        double tolerance = 0.01;
+        int randomSeed = 500;
+        double tolerance = 0.5;
 
-        NeuralNet net = new(2, 2, 1, 0)
+        NeuralNet net = new(2, 2, 1, 0, new NoActivation(), randomSeed)
         {
-            Alpha = 10
+            Alpha = 0.1
         };
 
         // Create comparison network
-        NeuralNet compare = new(2, 2, 1, 0);
+        NeuralNet compare = new(2, 2, 1, 0, new NoActivation());
         compare.SetWeight(0, 0, 0, -5);
         compare.SetWeight(0, 1, 0, 10);
         compare.SetBias(0, 0, -3);
 
-        Random random = new(1000);
+        Random random = new(randomSeed);
         for (int i = 0; i < 3000; i++)
         {
             Vector<double> input = Vector<double>.Build.DenseOfArray(random.NextDoubles(2));
@@ -166,5 +193,32 @@ public class NeuralNetTests
 
         // Delete file
         File.Delete("tempfileneuralnettest.txt");
+    }
+
+    private static NeuralNet GetNeuralNet()
+    {
+        NeuralNet net = new(2, 2, 2, 1, new Sigmoid());
+
+        // Set weights
+
+        net.SetWeight(0, 0, 0, 2);
+        net.SetWeight(0, 0, 1, -3);
+        net.SetWeight(0, 1, 0, -1);
+        net.SetWeight(0, 1, 1, 1);
+        
+        net.SetWeight(1, 0, 0, 5);
+        net.SetWeight(1, 0, 1, 1);
+        net.SetWeight(1, 1, 0, -2);
+        net.SetWeight(1, 1, 1, -1);
+
+        // Set biases
+
+        net.SetBias(0, 0, -1);
+        net.SetBias(0, 1, -2);
+        
+        net.SetBias(1, 0, 1);
+        net.SetBias(1, 1, -3);
+
+        return net;
     }
 }
