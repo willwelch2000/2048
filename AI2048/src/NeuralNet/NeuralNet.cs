@@ -11,6 +11,9 @@ public class NeuralNet
 {
     // // // fields
     
+    /// <summary>
+    /// objects defining how to move from one layer to the next
+    /// </summary>
     private readonly LayerTransform[] layerTransforms;
 
     /// <summary>
@@ -18,16 +21,23 @@ public class NeuralNet
     /// </summary>
     private readonly Vector<double>[] nodes;
 
-    // caches for derivative calculations
+    // caches for derivative calculations of a node with respect to something--mostly deprecated
 
-    private Dictionary<(int layer, int node, int wStartLayer, int wEndNode, int wStartNode), double> weightDerivativeCache;
-    private Dictionary<(int layer, int node, int bStartLayer, int bEndNode), double> biasDerivativeCache;
-    private Dictionary<(int endLayer, int endNode, int startLayer, int startNode), double> nodeDerivativeCache;
+    private Dictionary<(int layer, int node, int wStartLayer, int wEndNode, int wStartNode), double> nodeToWeightDerivativeCache;
+    private Dictionary<(int layer, int node, int bStartLayer, int bEndNode), double> nodeToBiasDerivativeCache;
+    private Dictionary<(int endLayer, int endNode, int startLayer, int startNode), double> nodeToNodeDerivativeCache;
 
     /// </summary>
-    /// Cache for loss derivatives used for accessor functions
+    /// Cache for derivatives of loss with respect to weights--used for accessor function
+    /// The same shape as the weights themselves, so that they can be added
     /// </summary>
-    private (Matrix<double>[] weights, Vector<double>[] biases)? lossDerivativeCache = null;
+    private Matrix<double>[]? lossToWeightDerivativeCache = null;
+
+    /// </summary>
+    /// Cache for derivatives of loss with respect to biases--used for accessor function
+    /// The same shape as the biases themselves, so that they can be added
+    /// </summary>
+    private Vector<double>[]? lossToBiasDerivativeCache = null;
 
     // // // constructors
 
@@ -80,9 +90,9 @@ public class NeuralNet
             nodes[i] = Vector<double>.Build.Dense(numMiddleNodes);
 
         // Initialize cache dictionaries and node derivative array
-        weightDerivativeCache = [];
-        biasDerivativeCache = [];
-        nodeDerivativeCache = [];
+        nodeToWeightDerivativeCache = [];
+        nodeToBiasDerivativeCache = [];
+        nodeToNodeDerivativeCache = [];
     }
 
 
@@ -104,6 +114,8 @@ public class NeuralNet
     /// Not actual node objects--copies
     /// </summary>
     public IEnumerable<Vector<double>> Nodes => nodes.Select(n => n.Clone());
+
+    // Shortcuts to see shape of net
 
     public int NumInputNodes => nodes[0].Count;
     public int NumMiddleNodes => nodes[^2].Count;
@@ -165,8 +177,7 @@ public class NeuralNet
     }
 
     /// <summary>
-    /// Given a single set of input value and its desired output, adjust the weights accordingly
-    /// TODO test
+    /// Given a single set of input values and its desired output, adjust the weights accordingly
     /// </summary>
     /// <param name="input">input layer</param>
     /// <param name="compare">desired output</param>
@@ -195,6 +206,7 @@ public class NeuralNet
     /// Get derivative of a node with respect to a weight
     /// To calculate d(nodes[5][2])/d(w[1][2][3]): WeightDerivative(5, 2, 1, 2, 3)
     /// To work properly, the GetOutputValues() function must be called first
+    /// Node derivatives are mostly deprecated because it's slower
     /// </summary>
     /// <param name="layer">layer of the numerator node for the derivative. For example, with dy1/dw111, y is the layer</param>
     /// <param name="node">which node in the layer for the numerator for the derivative</param>
@@ -205,7 +217,7 @@ public class NeuralNet
     public double GetNodeToWeightDerivative(int layer, int node, int wStartLayer, int wEndNode, int wStartNode)
     {
         // Already cached
-        if (weightDerivativeCache.TryGetValue((layer, node, wStartLayer, wEndNode, wStartNode), out double value))
+        if (nodeToWeightDerivativeCache.TryGetValue((layer, node, wStartLayer, wEndNode, wStartNode), out double value))
             return value;
 
         // Simple case for derivative
@@ -220,7 +232,7 @@ public class NeuralNet
             else
                 // This weight has nothing to do with that node
                 derivative = 0;
-            weightDerivativeCache[(layer, node, wStartLayer, wEndNode, wStartNode)] = derivative;
+            nodeToWeightDerivativeCache[(layer, node, wStartLayer, wEndNode, wStartNode)] = derivative;
             return derivative;
         }
 
@@ -230,7 +242,7 @@ public class NeuralNet
             int prevLayerLength = nodes[layer - 1].Count;
             double derivative = Enumerable.Range(0, prevLayerLength).Select(i => GetNodeToNodeDerivative(layer, node, layer - 1, i) * GetNodeToWeightDerivative(layer - 1, i, wStartLayer, wEndNode, wStartNode)).Sum();
             // double derivative = Enumerable.Range(0, prevLayerLength).Select(i => nodeDerivatives[layer][node, i] * WeightDerivative(layer - 1, i, wStartLayer, wEndNode, wStartNode)).Sum();
-            weightDerivativeCache[(layer, node, wStartLayer, wEndNode, wStartNode)] = derivative;
+            nodeToWeightDerivativeCache[(layer, node, wStartLayer, wEndNode, wStartNode)] = derivative;
             return derivative;
         }
 
@@ -240,6 +252,7 @@ public class NeuralNet
     /// <summary>
     /// Get derivative of node with respect to a bias
     /// To work properly, the GetOutputValues() function must be called first
+    /// Node derivatives are mostly deprecated because it's slower
     /// </summary>
     /// <param name="layer">layer of the numerator node for the derivative</param>
     /// <param name="node">which node in the target layer for the derivative</param>
@@ -249,7 +262,7 @@ public class NeuralNet
     public double GetNodeToBiasDerivative(int layer, int node, int bStartLayer, int bEndNode)
     {
         // Already cached
-        if (biasDerivativeCache.TryGetValue((layer, node, bStartLayer, bEndNode), out double value))
+        if (nodeToBiasDerivativeCache.TryGetValue((layer, node, bStartLayer, bEndNode), out double value))
             return value;
 
         // Simple case for derivative
@@ -265,7 +278,7 @@ public class NeuralNet
             else
                 // This bias has nothing to do with that node
                 derivative = 0;
-            biasDerivativeCache[(layer, node, bStartLayer, bEndNode)] = derivative;
+            nodeToBiasDerivativeCache[(layer, node, bStartLayer, bEndNode)] = derivative;
             return derivative;
         }
 
@@ -275,7 +288,7 @@ public class NeuralNet
             int prevLayerLength = nodes[layer - 1].Count;
             double derivative = Enumerable.Range(0, prevLayerLength).Select(i => GetNodeToNodeDerivative(layer, node, layer - 1, i) * GetNodeToBiasDerivative(layer - 1, i, bStartLayer, bEndNode)).Sum();
             // double derivative = Enumerable.Range(0, prevLayerLength).Select(i => nodeDerivatives[layer][node, i] * BiasDerivative(layer - 1, i, bStartLayer, bEndNode)).Sum();
-            biasDerivativeCache[(layer, node, bStartLayer, bEndNode)] = derivative;
+            nodeToBiasDerivativeCache[(layer, node, bStartLayer, bEndNode)] = derivative;
             return derivative;
         }
 
@@ -285,6 +298,7 @@ public class NeuralNet
     /// <summary>
     /// Get derivative of node with respect to another node
     /// To work properly, the GetOutputValues() function must be called first
+    /// Node derivatives are mostly deprecated because it's slower
     /// </summary>
     /// <param name="endLayer">layer of the numerator node for the derivative</param>
     /// <param name="endNode">which node in the target layer for the derivative</param>
@@ -294,7 +308,7 @@ public class NeuralNet
     public double GetNodeToNodeDerivative(int endLayer, int endNode, int startLayer, int startNode)
     {
         // Already cached
-        if (nodeDerivativeCache.TryGetValue((endLayer, endNode, startLayer, startNode), out double value))
+        if (nodeToNodeDerivativeCache.TryGetValue((endLayer, endNode, startLayer, startNode), out double value))
             return value;
 
         // Simple case for derivative
@@ -304,7 +318,7 @@ public class NeuralNet
             // Instead of actually giving the sigmoid input to the activator derivative function, we give the
             // already-activated value, just because the calculation is simpler (sigmoid*(1-sigmoid)), and it's what we know: the node value
             double derivative = layerTransforms[startLayer].Activator.ActivationDerivative(nodes[endLayer][endNode]) * layerTransforms[startLayer].Weights[endNode, startNode];
-            nodeDerivativeCache[(endLayer, endNode, startLayer, startNode)] = derivative;
+            nodeToNodeDerivativeCache[(endLayer, endNode, startLayer, startNode)] = derivative;
             return derivative;
         }
 
@@ -313,7 +327,7 @@ public class NeuralNet
         {
             int prevLayerLength = nodes[endLayer - 1].Count;
             double derivative = Enumerable.Range(0, prevLayerLength).Select(i => GetNodeToNodeDerivative(endLayer, endNode, endLayer - 1, i) * GetNodeToNodeDerivative(endLayer - 1, i, startLayer, startNode)).Sum();
-            nodeDerivativeCache[(endLayer, endNode, startLayer, startNode)] = derivative;
+            nodeToNodeDerivativeCache[(endLayer, endNode, startLayer, startNode)] = derivative;
             return derivative;
         }
 
@@ -328,10 +342,8 @@ public class NeuralNet
     /// <param name="endNode">which node in the target (end) layer for the weight</param>
     /// <param name="startNode">which node in the start layer for the weight</param>
     /// <returns></returns>
-    public double? GetLossToWeightDerivative(int startLayer, int endNode, int startNode)
-    {
-        return lossDerivativeCache?.weights[startLayer][endNode, startNode] ?? null;
-    }
+    public double? GetLossToWeightDerivative(int startLayer, int endNode, int startNode) =>
+        lossToWeightDerivativeCache?[startLayer][endNode, startNode] ?? null;
     
     /// <summary>
     /// Get derivative of loss function with respect to a bias
@@ -340,10 +352,8 @@ public class NeuralNet
     /// <param name="startLayer">layer of layer transformed by this weight (e.g. 1 means the biases going from layer 1 to 2)</param>
     /// <param name="endNode">which node in the target (end) layer for the bias</param>
     /// <returns></returns>
-    public double? GetLossToBiasDerivative(int startLayer, int endNode)
-    {
-        return lossDerivativeCache?.biases[startLayer][endNode] ?? null;
-    }
+    public double? GetLossToBiasDerivative(int startLayer, int endNode) =>
+        lossToBiasDerivativeCache?[startLayer][endNode] ?? null;
 
     /// <summary>
     /// Uses matrix multiplication to efficiently calculate derivatives
@@ -387,17 +397,18 @@ public class NeuralNet
             nodeDerivativeMatrix = preActivationNodeDerivativeMatrix * layerTransform.Weights;
         }
 
-        lossDerivativeCache = (weightDerivatives, biasDerivatives);
+        (lossToWeightDerivativeCache, lossToBiasDerivativeCache) = (weightDerivatives, biasDerivatives);
 
         return (weightDerivatives, biasDerivatives);
     }
 
     public void ResetDerivativeCaches()
     {
-        weightDerivativeCache = [];
-        biasDerivativeCache = [];
-        nodeDerivativeCache = [];
-        lossDerivativeCache = null;
+        nodeToWeightDerivativeCache = [];
+        nodeToBiasDerivativeCache = [];
+        nodeToNodeDerivativeCache = [];
+        lossToWeightDerivativeCache = null;
+        lossToBiasDerivativeCache = null;
     }
 
     public NeuralNet Clone()
