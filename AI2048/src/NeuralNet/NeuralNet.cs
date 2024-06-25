@@ -185,6 +185,13 @@ public class NeuralNet
     {
         (Matrix<double>[] weightDerivatives, Vector<double>[] biasDerivatives) = CalculateLossDerivatives(input, compare);
 
+        // Debugging--all of a sudden, the weights all increase to absurd numbers
+        // I think somewhere in the derivative calculations, there's something like a 1/(small number)
+        if (Math.Abs(layerTransforms[0].Weights[0, 0]) > 1e3 || Math.Abs(weightDerivatives[0][0, 0]) > 1e3)
+        {
+
+        }
+
         for (int i = 0; i < layerTransforms.Length; i++)
         {
             layerTransforms[i].Weights -= Alpha * weightDerivatives[i];
@@ -395,6 +402,11 @@ public class NeuralNet
             // Matrix representing Jacobian of activation function (m[i,j] = derivative of ith output with respect to jth input, dyi/dxj)
             // For a function like the activation functions, which just perform a function on each input by itself, it's a diagonal matrix
             nodeDerivativeMatrix = preActivationNodeDerivativeMatrix * layerTransform.Weights;
+        }
+
+        if (Math.Abs(weightDerivatives[0][0, 0]) > 1e3)
+        {
+            
         }
 
         (lossToWeightDerivativeCache, lossToBiasDerivativeCache) = (weightDerivatives, biasDerivatives);

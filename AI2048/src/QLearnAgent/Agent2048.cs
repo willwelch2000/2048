@@ -70,11 +70,11 @@ public class Agent2048 : IQLearnAgent<int[,], Direction>
         foreach (int val in state)
             features[i++] = (double) val / 100;
         
-        // Maps of which tiles are the same
+        // Maps of which tiles are the same--if the same, the tile is the value / 100, otherwise -0.1
         for (int j = 0; j < 16; j++)
             for (int k = 0; k < 16; k++)
                 if (j != k)
-                    features[i++] = tiles[j] == tiles[k] && tiles[j] != 0 ? 1 : -1;
+                    features[i++] = tiles[j] == tiles[k] && tiles[j] != 0 ? tiles[k] / 100 : -0.1;
         
         return features;
     }
