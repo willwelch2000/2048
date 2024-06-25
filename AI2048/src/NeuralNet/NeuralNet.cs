@@ -187,8 +187,8 @@ public class NeuralNet
 
         for (int i = 0; i < layerTransforms.Length; i++)
         {
-            weightDerivatives[i] -= Alpha * weightDerivatives[i];
-            biasDerivatives[i] -= Alpha * biasDerivatives[i];
+            layerTransforms[i].Weights -= Alpha * weightDerivatives[i];
+            layerTransforms[i].Biases -= Alpha * biasDerivatives[i];
         }
     }
 
