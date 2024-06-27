@@ -14,6 +14,23 @@ Q-Learning is implemented for 2048 in a few different forms
 - Approximate Q-Learning uses features of the game, extracted via functions defined in the agent, to approximate the q-values
 - Deep Q-Learning uses a neural network to approximate the q-values. The input layer of the network is defined in the agent and isn't necessarily just the tile values in the game. For example, several values are included to show a mapping of which squares are equal
 
+### Example Successful Setup Specifications
+Neural Network
+- 4 total layers (2 middle layers)
+- Input size of 256
+- 50 middle nodes
+- First two layer transforms use ReLUWithSlope for activation (0.1 positive slope, 0.001 negative slope)
+- Final layer transform uses NoActivation for activation (linear)
+Deep Q Learner specifications
+- Starting epsilon of 1, epsilon decay of 0.99, minimum epsilon of 0.1
+- Iterations before net transfer = 1000
+- Starting alpha of 0.000001
+- Alpha is recalculated after each 100 episodes to be 0.01 / average rewards of last 100
+Results (average rewards)
+- v1: 2398.8
+- v2: 2508.4
+- v3: 2878
+
 ### Notes
 - Without a small alpha value, the training can become unstable, leading to huge weight values. 
 - The alpha of the deep q-learning system is scaled to the average rewards of the system
