@@ -32,6 +32,10 @@ public static class Util
         streamWriter.WriteLine(neuralNet.NumOutputNodes);
         streamWriter.WriteLine(neuralNet.NumMiddleLayers);
 
+        // Activators
+        foreach (IActivationFunction activator in neuralNet.LayerTransforms.Select(t => t.Activator))
+            streamWriter.WriteLine(ActivationFunctionReadWrite.Write(activator));
+
         // Weights
         foreach (Matrix<double> weightMatrix in neuralNet.LayerTransforms.Select(t => t.Weights))
             for (int i = 0; i < weightMatrix.RowCount; i++)
@@ -56,6 +60,10 @@ public static class Util
         int numMiddleLayers = streamReader.ParseIntFromNextLine();
 
         NeuralNet neuralNet = new(numInputNodes, numMiddleNodes, numOutputNodes, numMiddleLayers);
+
+        // Set activators
+        for (int i = 0; i < neuralNet.LayerTransforms.Count(); i++)
+            neuralNet.SetActivator(i, ActivationFunctionReadWrite.Read(streamReader.ReadLine() ?? ""));
 
         // Weights
         int startLayer = 0;

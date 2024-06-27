@@ -10,4 +10,8 @@ public class ReLUWithSlopes(double positiveSlope, double negativeSlope) : IActiv
 
     public double ActivationDerivative(double y) =>
         y > 0 ? positiveSlope : negativeSlope;
+
+    public double PositiveSlope => positiveSlope;
+
+    public double NegativeSlope => negativeSlope;
 }
