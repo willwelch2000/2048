@@ -59,6 +59,8 @@ public abstract class QLearner<S, A>(IQLearnAgent<S, A> agent)
     public double TotalRewards { get; private set; } = 0;
     public double AverageRewards => TotalRewards / EpisodesCompleted;
 
+    public IQLearnAgent<S, A> Agent => agent;
+
 
     // // // methods
 

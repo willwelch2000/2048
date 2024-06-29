@@ -3,7 +3,7 @@ using MathNet.Numerics.LinearAlgebra;
 namespace AI2048.Deep;
 
 /// <summary>
-/// 
+/// Extension of QLearner that uses a neural network to approximate the Q-function
 /// </summary>
 /// <typeparam name="S">Represents type of state</typeparam>
 /// <typeparam name="A">Represents type of action</typeparam>
