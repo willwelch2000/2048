@@ -9,10 +9,9 @@ public class Program
 {
     public static void Main()
     {
-        // 1319.36, 2183.28, 934.08, 746.08, 622.88
-        // RunWithoutTraining(Util.GetNeuralNetFromFile("reluslope_256x2x50_6_11_v3.txt"));
-        RunAndSaveToFile(Util.GetNeuralNetFromFile("reluslope_256x2x50_6_11_v3.txt"), "reluslope_256x2x50_6_13");
-        // RunAndSaveToFile(null, "reluslope_256x2x50_6_9");
+        // RunWithoutTraining(Util.GetNeuralNetFromFile("reluslope_256x2x50_6_28_v7.txt"));
+        // RunAndSaveToFile(Util.GetNeuralNetFromFile("reluslope_256x2x50_6_28_v6.txt"), "reluslope_256x2x50_6_28", 3);
+        RunAndSaveToFile(null, "reluslope_256x2x50_7_1", 1);
     }
 
     public static void NNTest() {
@@ -131,14 +130,8 @@ public class Program
         File.Delete("tempfileneuralnettest.txt");
     }
 
-    public static void RunAndSaveToFile(NeuralNet? startingNet, string filename)
+    public static void RunAndSaveToFile(NeuralNet? startingNet, string filename, int start, int iterationsBeforeSave=500, int iterationsBeforeAlphaUpdate=25, int totalIterations=2000)
     {
-        if (startingNet is not null)
-        {
-            foreach (var layerTransform in startingNet.LayerTransforms)
-                layerTransform.Activator = new ReLUWithSlopes(0.1, 0.001);
-            startingNet.LayerTransforms.Last().Activator = new NoActivation();
-        }
         IActivationFunction activationFunction = new ReLUWithSlopes(0.1, 0.001);
         Agent2048 agent = new();
         DeepQLearner<int[,], Direction> deepQLearner;
@@ -146,17 +139,49 @@ public class Program
             deepQLearner = new(agent, startingNet);
         else
             deepQLearner = new(agent, 50, 2, activationFunction);
-        deepQLearner.Epsilon = .3;
-        deepQLearner.IterationsBeforeNetTransfer = 50;
-        deepQLearner.Alpha = 0.01;
-        _ = new CommandLineDisplay(agent.Game);
-        for (int v = 1; v < 4; v++)
+        deepQLearner.Epsilon = 0.2;
+        deepQLearner.EpsilonDecay = 0.99;
+        deepQLearner.MinEpsilon = 0.1;
+        deepQLearner.IterationsBeforeNetTransfer = 1000;
+        // _ = new CommandLineDisplay(agent.Game);
+
+        for (int i = 0; i < totalIterations / iterationsBeforeAlphaUpdate; i++)
         {
-            deepQLearner.PerformQLearning(1);
+            // Update alpha based on initial output values from neural network--higher values means alpha needs to be lower to avoid drastic changes
+            agent.Restart();
+            double max = deepQLearner.MainNet.GetOutputValues(agent.GetNeuralNetFeatures(agent.GetGameState())).AbsoluteMaximum();
+            deepQLearner.Alpha = 0.1 / (max == 0 ? 1 : max);
+
+            // Do learning
+            deepQLearner.ResetStats();
+            deepQLearner.PerformQLearning(iterationsBeforeAlphaUpdate);
             Console.WriteLine($"Test score: {deepQLearner.AverageScore}");
             Console.WriteLine($"Test rewards: {deepQLearner.AverageRewards}");
-            deepQLearner.TargetNet.SaveTrainingState($"{filename}_v{v}.txt");
+
+            // Save state if correct iteration (last in cycle)
+            if ((i + 1) % (iterationsBeforeSave / iterationsBeforeAlphaUpdate) == 0)
+            {
+                deepQLearner.TargetNet.SaveTrainingState($"{filename}_v{start + i/iterationsBeforeAlphaUpdate}.txt");
+            }
         }
+
+
+        // for (int v = start; v < start + 3; v++)
+        // {
+        //     // Set alpha based on initial output values from neural network--higher values means alpha needs to be lower to avoid drastic changes
+        //     agent.Restart();
+        //     double max = deepQLearner.MainNet.GetOutputValues(agent.GetNeuralNetFeatures(agent.GetGameState())).AbsoluteMaximum();
+        //     deepQLearner.Alpha = 0.1 / (max == 0 ? 1 : max);
+
+        //     deepQLearner.ResetStats();
+        //     deepQLearner.PerformQLearning(50);
+        //     Console.WriteLine($"Test score: {deepQLearner.AverageScore}");
+        //     Console.WriteLine($"Test rewards: {deepQLearner.AverageRewards}");
+
+        //     // Adjust alpha based on average rewards
+        //     // deepQLearner.Alpha = 0.1 / deepQLearner.AverageRewards;
+        //     deepQLearner.TargetNet.SaveTrainingState($"{filename}_v{v}.txt");
+        // }
     }
 
     public static void RunWithoutTraining(NeuralNet startingNet)
@@ -167,7 +192,7 @@ public class Program
         Agent2048 agent = new();
         DeepQLearner<int[,], Direction> deepQLearner = new(agent, startingNet);
         _ = new CommandLineDisplay(agent.Game);
-        deepQLearner.PerformWithoutTraining(50);
+        deepQLearner.PerformWithoutTraining(100);
         Console.WriteLine($"Test score: {deepQLearner.AverageScore}");
         Console.WriteLine($"Test rewards: {deepQLearner.AverageRewards}");
     }
